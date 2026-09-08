@@ -124,19 +124,70 @@ def _(norm, np, plt):
     scale2 = 10  # standard deviation
     pdf1 = norm.pdf(x, loc1, scale1)
     pdf2 = norm.pdf(x, loc2, scale2)
+    _criterion = (loc1 + loc2) / 2
+    _dprime = (loc2 - loc1) / scale1
     # Compute the PDF values
-    plt.figure(figsize=(10, 3))
-    plt.plot(x, pdf1, label=f'Noise Distribution loc={loc1}, scale={scale1}', color='red')
-    plt.plot(x, pdf2, label=f'Signal Distribution loc={loc2}, scale={scale2}', color='blue')
+    plt.figure(figsize=(11, 4))
+    plt.plot(x, pdf1, label=f'Noise trials: mean={loc1}, SD={scale1}', color='red')
+    plt.plot(x, pdf2, label=f'Signal trials: mean={loc2}, SD={scale2}', color='blue')
+    _right_of_criterion = x >= _criterion
+    _left_of_criterion = x < _criterion
+    plt.fill_between(
+        x[_right_of_criterion],
+        0,
+        pdf2[_right_of_criterion],
+        color='blue',
+        alpha=0.20,
+        label='H: hit area',
+    )
+    plt.fill_between(
+        x[_right_of_criterion],
+        0,
+        pdf1[_right_of_criterion],
+        color='red',
+        alpha=0.30,
+        hatch='//',
+        label='F: false-alarm area',
+    )
+    plt.fill_between(
+        x[_left_of_criterion],
+        0,
+        pdf1[_left_of_criterion],
+        color='red',
+        alpha=0.07,
+    )
     # Plot the distributions
     _idx = np.argwhere(np.diff(np.sign(pdf2 - pdf1))).flatten()
     plt.plot(x[_idx], pdf2[_idx], 'ko')
     intersect_point = x[_idx]
-    plt.title('Normal Distributions of response variable when signal is present/absent (yes/no)')
-    plt.xlabel('x')
-    plt.ylabel('PDF')
-    plt.legend()
+    plt.axvline(
+        _criterion,
+        color='black',
+        linestyle='--',
+        label=f'Decision criterion k={_criterion:g} (c=0)',
+    )
+    _arrow_height = 1.08 * max(np.max(pdf1), np.max(pdf2))
+    plt.annotate(
+        '',
+        xy=(loc2, _arrow_height),
+        xytext=(loc1, _arrow_height),
+        arrowprops={'arrowstyle': '<->', 'color': 'purple', 'linewidth': 2},
+    )
+    plt.text(
+        (loc1 + loc2) / 2,
+        1.02 * _arrow_height,
+        f"d' = {_dprime:g} standard deviations",
+        color='purple',
+        ha='center',
+        va='bottom',
+    )
+    plt.title('Figure 1. Equal-variance Gaussian evidence in a yes/no task')
+    plt.xlabel('Internal evidence')
+    plt.ylabel('Density')
+    plt.ylim(0, 1.28 * _arrow_height)
+    plt.legend(fontsize=8, ncol=2, loc='upper left')
     plt.grid(True)
+    plt.tight_layout()
     plt.show()
     return diff_x, intersect_point, loc1, loc2, pdf1, pdf2, scale1, scale2, x
 
@@ -144,11 +195,13 @@ def _(norm, np, plt):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    One way to do this task is to set a value of a decision threshold. If the response variable is greater than this value, we say the signal is present, and if not, we say it is absent.
+    **How to read Figure 1.** The red curve shows evidence on noise-only trials and the blue curve shows evidence on signal trials. The black dashed line is the observer's decision threshold: evidence to its right produces a “signal” response. The purple arrow is $d'$, the distance between the two peaks measured in units of their common standard deviation. The standardized criterion $c$ says where the black line lies relative to the midpoint between the peaks. Both measures are explained just below Figure 2.
+
+    The area under the **blue** curve to the right of the black line is the hit rate. The area under the **red** curve to the right is the false-alarm rate. The red area to the left is specificity. These are areas under curves because they represent the chances of observations landing on each side of the decision line.
 
     More generally, response variables can be multidimensional (in which case the acceptance region may also be multidimensional). The acceptance region can also be much more complex, even in 1 dimension, if the underlying response variable distributions are. Think about these..
 
-    But for now, let us consider the response variable distributions above, and then see what happens as the threshold is varied. A very low decision threshold calls almost everything “signal”: it catches more real signals but also produces more false alarms. A very high threshold does the reverse. This movable **decision threshold** is distinct from a fixed sensory threshold; the historical evidence and low-threshold alternatives are discussed in [Appendix A3](#a3-why-roc-experiments-mattered).
+    Figure 2 moves that line through every possible position. A very low decision threshold calls almost everything “signal”: it catches more real signals but also produces more false alarms. A very high threshold does the reverse. Figure 2B plots the resulting hit rate against false-alarm rate. This movable **decision threshold** is distinct from a fixed sensory threshold; the historical evidence and low-threshold alternatives are discussed in [Appendix A3](#a3-why-roc-experiments-mattered).
     """)
     return
 
@@ -210,17 +263,17 @@ def _(auc, intersect_point, loc1, loc2, norm, np, plt, scale1, scale2, x):
     plt.plot(thresholds, _percor_theoretical)
     plt.axvline(intersect_point, color='black', linestyle='--')
     plt.xlabel('Threshold')
-    plt.ylabel('Prob. correct')
-    plt.title('How prob. correct depends on threshold')
+    plt.ylabel('Chance of a correct response')
+    plt.title('Figure 2A. Accuracy as the decision threshold moves')
     plt.subplot(1, 2, 2)
     _roc_fpr_simulation = np.r_[1.0, fpr_simulation, 0.0]
     _roc_tpr_simulation = np.r_[1.0, tpr_simulation, 0.0]
     plt.plot(_roc_fpr_theoretical, _roc_tpr_theoretical, label='Theoretical ROC Curve')
     plt.plot(_roc_fpr_simulation, _roc_tpr_simulation, label='Simulation-based ROC Curve', linestyle='--')
     plt.plot([0, 1], [0, 1], color='navy', linestyle='-.', label='Chance level')
-    plt.xlabel('False Positive Rate = 1 - Specificity')
-    plt.ylabel('True Positive Rate = Sensitivity')
-    plt.title('Theoretical vs Simulation-based ROC Curve')
+    plt.xlabel('False-alarm rate (the opposite of specificity)')
+    plt.ylabel('Hit rate (sensitivity / recall)')
+    plt.title('Figure 2B. The same thresholds traced in ROC space')
     plt.legend()
     plt.grid(True)
     plt.xlim([0, 1])
@@ -237,27 +290,33 @@ def _(mo):
     mo.md(r"""
     ### Standard SDT measures
 
-    For a criterion $k$, let $H=P(x>k\mid\text{signal})$ be the hit rate and $F=P(x>k\mid\text{noise})$ the false-alarm rate. For the equal-variance Gaussian model used above,
+    The notation $P(x>k\mid\text{signal})$ simply means “the chance that the evidence lands to the right of the decision line on a signal trial.” In Figure 1 that is the blue area to the right of the black line. We call it the hit rate $H$. Replacing “signal” with “noise” gives the red area to the right, the false-alarm rate $F$.
+
+    For the equal-variance Gaussian model,
 
     \[
     d' = \Phi^{-1}(H)-\Phi^{-1}(F)
        = \frac{\mu_S-\mu_N}{\sigma},
     \]
 
-    where $d'$ measures sensitivity: larger values mean better separation, independently of the chosen criterion. Response bias is commonly summarized by
+    **In plain language:** $d'$ is the purple peak-to-peak distance in Figure 1, measured with the bell curves' standard deviation as the ruler. Here the peaks are 20 evidence units apart and the standard deviation is 10, so $d'=2$. The symbol $\Phi^{-1}$ only converts each shaded area to that standard-deviation ruler. Larger $d'$ means less overlap and easier discrimination; moving the black criterion line does not move the peaks and therefore does not change $d'$.
+
+    Response bias is commonly summarized by
 
     \[
     c=-\frac{1}{2}\left[\Phi^{-1}(H)+\Phi^{-1}(F)\right]
       =\frac{k-(\mu_S+\mu_N)/2}{\sigma}.
     \]
 
-    Thus $c=0$ is unbiased, $c>0$ is conservative (fewer signal responses), and $c<0$ is liberal. The likelihood ratio at the criterion is
+    **In plain language:** $c$ describes the location of the black decision line in Figure 1. It is zero when the line is halfway between the two peaks, positive when shifted right (a conservative observer who says “signal” less often), and negative when shifted left (a liberal observer who says “signal” more often). It measures that shift using the same standard-deviation ruler.
+
+    The likelihood ratio at the criterion is
 
     \[
     \beta=\frac{f_S(k)}{f_N(k)}=e^{d'c}.
     \]
 
-    With equal priors and equal error costs, the optimal criterion has $c=0$ and $\beta=1$. These simple formulas for $d'$, $c$, and $\beta=e^{d'c}$ assume equal-variance Gaussian distributions; the likelihood-ratio decision rule itself is more general.
+    **In plain language:** $\beta$ compares the height of the blue curve with the height of the red curve exactly at the black line. At the crossing in Figure 1 the heights are equal, so $\beta=1$. With equally common trial types and equally costly errors, that crossing is the accuracy-maximizing location and $c=0$. These short formulas assume equal-variance Gaussian distributions; the idea of comparing how well the evidence agrees with signal versus noise is more general.
     """)
     return
 
@@ -290,13 +349,15 @@ def _(mo):
     mo.md(r"""
     ## 3. Simulated yes/no data
 
-    We now simulate the structure of an experiment before replacing it with real data. On signal trials, contrast increases the mean internal response linearly:
+    We now simulate the structure of an experiment before replacing it with real data. The next formula is a compact recipe for the simulation:
 
     \[
     X\mid S,x\sim N(d'(x),1),\qquad d'(x)=g x.
     \]
 
-    Noise-only catch trials have mean zero. The observer responds "signal" when $X>k$. A small lapse probability produces a random response; ordinary internal and binomial sampling noise supply the remaining variability. The code is visible so every assumption is explicit.
+    **In plain language:** on a signal trial at contrast $x$, draw one internal evidence value $X$ from a bell curve whose peak is at $d'(x)$ and whose standard deviation is one. Increasing contrast moves that peak to the right; $g$ says how much it moves for each unit of contrast. Noise-only catch trials use a bell curve centered at zero. The observer says “signal” when the draw lands to the right of criterion $k$, just as in Figure 1.
+
+    Figure 3 shows the result after many such trials. The black curve is the chance of saying “signal” predicted by the simulation recipe, the blue dots are simulated signal trials, and the red cross is the noise-only catch condition. A small lapse probability produces an occasional random response; ordinary internal and trial-sampling noise supply the remaining variability.
     """)
     return
 
@@ -351,13 +412,17 @@ def _(norm, np, plt):
         label='Noise-only catch trials',
     )
     plt.xlabel('Contrast (%)')
-    plt.ylabel('Proportion \"signal\" responses')
+    plt.ylabel('Chance of a \"signal\" response')
+    plt.title('Figure 3. Simulated yes/no responses across contrast')
     plt.ylim(0, 1)
     plt.grid(True)
     plt.legend()
     plt.show()
 
-    print(f'Catch trials: {false_alarm_count}/{n_catch}; F = {false_alarm_rate:.3f}')
+    print(
+        f'Noise-only catch trials: {false_alarm_count} of {n_catch} produced '
+        'a "signal" response.'
+    )
     print('Contrast | signal responses / trials')
     for _contrast, _yes in zip(contrast_levels, yes_counts):
         print(f'{_contrast:8.2f} | {_yes:3d} / {n_per_level}')
@@ -388,9 +453,9 @@ def _(mo):
 
     Common curve choices are:
 
-    - **Cumulative Gaussian (<code>norm</code>):** follows directly when internal evidence has additive Gaussian noise, its mean changes linearly with the stimulus, and the observer uses a fixed criterion: $P(\text{response})=\Phi(a+bx)$.
-    - **Logistic:** follows if the latent decision noise is logistic, or equivalently if response log-odds are linear in stimulus: $\log[p/(1-p)]=a+bx$. It resembles the cumulative Gaussian but has somewhat heavier tails.
-    - **Weibull:** for positive intensities, $P(\text{detect})=1-\exp[-(x/\alpha)^\beta]$ follows from a Poisson-like detection or probability-summation account in which detection occurs when at least one effective event succeeds. It is common for contrast detection and becomes a Gumbel-shaped sigmoid on log intensity.
+    - **Cumulative Gaussian (<code>norm</code>):** $P(\text{response})=\Phi(a+bx)$. **In plain language:** the chance of the response is the accumulated area under a bell curve. Parameter $a$ moves the S-shaped curve left or right, while $b$ controls how quickly it rises. This choice follows naturally when Gaussian internal evidence moves linearly with the stimulus and the observer uses a fixed criterion, as in Figure 1.
+    - **Logistic:** $\log[p/(1-p)]=a+bx$. **In plain language:** each step in stimulus adds a fixed amount to the log-odds of responding “signal.” The result looks much like a cumulative Gaussian but has somewhat heavier tails; again, $a$ sets horizontal position and $b$ sets steepness.
+    - **Weibull:** $P(\text{detect})=1-\exp[-(x/\alpha)^\beta]$. **In plain language:** as positive intensity grows, the chance that every possible detection event fails shrinks. Parameter $\alpha$ sets the intensity scale and $\beta$ controls shape. This curve is common for contrast detection and becomes a Gumbel-shaped sigmoid on log intensity.
     - **Other shapes:** Gumbel variants accommodate asymmetric tails and Student-$t$ links allow heavier tails.
 
     The fit below uses the signal-trial hit counts; the catch-trial responses enter the subsequent $d'$ calculation. A joint SDT fit would model both together. The next cell selects the curve. For Weibull, psignifit expects the positive stimulus levels to be transformed to log space. Here symmetric stimulus-independent errors were simulated, so <code>equal asymptote</code> is an appropriate constrained yes/no model; use <code>yes/no</code> when the lower and upper asymptotes should vary independently.
@@ -426,9 +491,9 @@ def _(np, ps, psp, psychometric_data, sigmoid_name, plt):
         psychometric_fit,
         ax=_axis,
         x_label=_x_label,
-        y_label='P(\"signal\" response | signal trial)',
+        y_label='Proportion of signal responses',
     )
-    _axis.set_title(f'psignifit: {sigmoid_name} link')
+    _axis.set_title(f'Figure 4. Psychometric fit ({sigmoid_name} link)')
     _axis.grid(True)
     plt.show()
     print('Posterior parameter estimates:')
@@ -441,19 +506,21 @@ def _(mo):
     mo.md(r"""
     ## 5. From SDT to stimulus-dependent psychometric functions
 
-    At each stimulus level $x$, SDT supplies a hit rate and a false-alarm rate. With unit variance and a fixed criterion,
+    Figure 4 fits a smooth curve through the observed responses from Figure 3. At each stimulus level $x$, SDT supplies a hit rate and a false-alarm rate. With unit variance and a fixed criterion,
 
     \[
     H(x)=\Phi(d'(x)-k),\qquad F=\Phi(-k).
     \]
 
-    Therefore the psychometric curve $H(x)$ is determined jointly by the decision rule and the transducer that maps the physical stimulus to sensitivity. If $d'(x)=g x$, $H(x)$ is cumulative Gaussian in $x$. For positive contrast, a common extension is
+    **In plain language:** $H(x)$ is the blue area to the right of the decision line in Figure 1 after contrast $x$ has moved the blue curve. $F$ is the red area to the right of that line; in this simple model it stays fixed because the noise curve and criterion do not move. The symbol $\Phi$ converts a distance on the horizontal axis into the area under a bell curve to its left.
+
+    Therefore the psychometric curve is determined jointly by the decision rule and the transducer that maps the physical stimulus to $d'$. If $d'(x)=g x$, every step in contrast moves the signal peak by the same amount and the resulting response curve is cumulative Gaussian. For positive contrast, a common extension is
 
     \[
     d'(x)=(g x)^p,
     \]
 
-    where $g$ controls sensitivity/gain and $p$ controls nonlinear growth. This is one route from the elementary SDT picture to a contrast psychometric function.
+    **In plain language:** $g$ controls the overall horizontal separation of the signal and noise peaks, while $p$ allows that separation to grow faster or slower than a straight line. Figure 5 plots this peak separation, measured in standard-deviation units, against contrast.
     """)
     return
 
@@ -481,7 +548,11 @@ def _(
     assert len(empirical_dprime) == len(contrast_levels)
 
     plt.figure(figsize=(8, 3))
-    plt.scatter(contrast_levels, empirical_dprime, label="Estimated from H and F")
+    plt.scatter(
+        contrast_levels,
+        empirical_dprime,
+        label="Estimated d' from hit and false-alarm areas",
+    )
     plt.plot(
         contrast_levels,
         true_dprime,
@@ -490,6 +561,7 @@ def _(
     )
     plt.xlabel('Contrast (%)')
     plt.ylabel("d'")
+    plt.title("Figure 5. Sensitivity grows with contrast")
     plt.grid(True)
     plt.legend()
     plt.show()
@@ -597,7 +669,9 @@ def _(mo):
       +\frac{\sigma_N}{\sigma_S}\Phi^{-1}(F),
     \]
 
-    so its slope is $\sigma_N/\sigma_S$, rather than 1. The log-likelihood ratio is then quadratic in $x$, and the likelihood ratio may cross the optimal $\beta$ twice; consequently, the optimal decision region need not be the simple rule $x>k$. The ROC, AUC, and general likelihood-ratio rule remain valid, but the equal-variance formulas above do not.
+    **In plain language:** $\Phi^{-1}$ redraws each ROC axis using a standard-deviation ruler. On those rulers the ROC becomes a straight line. Its tilt is the noise spread divided by the signal spread, $\sigma_N/\sigma_S$; equal-width bell curves give a tilt of one. If one curve is wider than the other, the simple peak-distance interpretation of $d'$ depends on which spread is used.
+
+    The log-likelihood ratio is then a curved rather than a straight function of evidence, and it may cross the decision cutoff twice. In picture terms, “signal” might be favored only over a middle or outer region instead of everywhere to the right of one vertical line. The ROC, AUC, and general rule of choosing the more plausible source remain valid, but the equal-variance shortcuts above do not.
 
     With several criteria or confidence ratings, estimate the full ROC or a binormal zROC. With only one $(H,F)$ point, $A'$ is a common nonparametric descriptive index; $d_a$ is a model-based unequal-variance alternative. Neither has exactly the same interpretation as equal-variance $d'$, so report the model and assumptions with the number.
     """)
@@ -619,9 +693,9 @@ def _(mo):
 
     ### A4. Two-interval, two-alternative forced choice
 
-    The vertical line above in the left column is drawn at the intersection point of the two distributions from above.
-
     In this task each trial contains two observations: one from A (the signal) and one from B (the noise). The observer knows A is present and chooses its interval or location. An example is choosing which of two brief intervals contained a faint tone. Unlike yes/no detection, “signal absent” is not an option.
+
+    Figure 6 plots the comparison value $D$: observation 1 minus observation 2. The blue curve describes trials with A in interval 1, the red curve describes trials with A in interval 2, and the black dashed line is the boundary between the two choices.
     """)
     return
 
@@ -634,14 +708,50 @@ def _(diff_x, loc1, loc2, math, norm, np, plt, scale1, scale2):
     _difference_sd = math.sqrt(scale1 ** 2 + scale2 ** 2)
     pdf_diff1 = norm.pdf(diff_x, _delta, _difference_sd)
     pdf_diff2 = norm.pdf(diff_x, -_delta, _difference_sd)
+    plt.figure(figsize=(10, 4))
     plt.plot(diff_x, pdf_diff1, color='blue', label='A in interval 1: mean +Δ')
     plt.plot(diff_x, pdf_diff2, color='red', label='A in interval 2: mean −Δ')
+    _right_of_zero = diff_x >= 0
+    _left_of_zero = diff_x <= 0
+    plt.fill_between(
+        diff_x[_right_of_zero],
+        0,
+        pdf_diff1[_right_of_zero],
+        color='blue',
+        alpha=0.18,
+        label='Correct area when A is in interval 1',
+    )
+    plt.fill_between(
+        diff_x[_left_of_zero],
+        0,
+        pdf_diff2[_left_of_zero],
+        color='red',
+        alpha=0.18,
+        label='Correct area when A is in interval 2',
+    )
     plt.axvline(0, color='black', linestyle='--', label='Choose interval 1 if D > 0')
-    plt.title('2I-2AFC decision variable: D = X₁ − X₂')
+    _difference_arrow_height = 1.08 * max(np.max(pdf_diff1), np.max(pdf_diff2))
+    plt.annotate(
+        '',
+        xy=(_delta, _difference_arrow_height),
+        xytext=(-_delta, _difference_arrow_height),
+        arrowprops={'arrowstyle': '<->', 'color': 'purple', 'linewidth': 2},
+    )
+    plt.text(
+        0,
+        1.02 * _difference_arrow_height,
+        '2Δ between conditional means',
+        color='purple',
+        ha='center',
+        va='bottom',
+    )
+    plt.title('Figure 6. 2I-2AFC decision variable: D = X₁ − X₂')
     plt.xlabel('Difference D')
-    plt.ylabel('PDF')
+    plt.ylabel('Density')
     plt.legend()
     plt.grid(True)
+    plt.ylim(0, 1.28 * _difference_arrow_height)
+    plt.tight_layout()
     plt.show()
     _percentage_correct = 1 - norm.cdf(0, _delta, _difference_sd)
     print(f'Prob. of being correct in 2-I, 2-AFC task: {_percentage_correct:.4f}')
@@ -669,6 +779,8 @@ def _(mo):
     P(\text{correct in 2I-2AFC})=\Phi\left(\frac{d'}{\sqrt{2}}\right).
     \]
 
+    **In plain language:** proportion correct is the blue area to the right of the black choice line in Figure 6 (and, by symmetry, the red area to its left). Independent noise from two observations makes the comparison distribution $\sqrt{2}$ times wider than either single-observation distribution.
+
     Looking instead at the full separation between the “A in interval 1” and “A in interval 2” distributions gives $2\Delta/(\sqrt{2}\sigma)=\sqrt{2}d'$. These are the same geometry viewed in two ways: distance from either mean to the choice boundary versus distance between the two conditional means.
 
     Under the standard assumptions—independent observations, the same evidence scale in both tasks, and a rule that chooses the larger observation—the **area theorem** described by Green and Swets says that 2I-2AFC proportion correct also equals the area under the yes/no ROC:
@@ -677,17 +789,19 @@ def _(mo):
     P(X_A>X_B)=P(\text{correct in 2I-2AFC})=\mathrm{AUC}.
     \]
 
+    **In plain language:** $P(X_A>X_B)$ means the chance that one randomly drawn A observation produces more evidence than one randomly drawn B observation. That is exactly the chance of choosing the correct member of a pair.
+
     This also explains the connection to the Mann–Whitney test. Empirical AUC counts how often an A observation ranks above a B observation across all A–B pairs (with half credit for ties). The Mann–Whitney $U$ statistic counts the same pairwise orderings. The test uses that count to ask whether the groups differ; AUC uses it to describe discrimination on a chance-to-perfect scale. They are closely connected, but an AUC value is an effect-size description rather than the Mann–Whitney significance test itself ([Green & Swets, 1966](https://books.google.com/books?id=fHR9AAAAMAAJ); [Bamber, 1975](https://doi.org/10.1016/0022-2496(75)90001-2)).
 
     There is no freely movable yes/no criterion in the ideal comparison rule, but order effects, unequal interval noise, or a preference for one interval can still introduce bias and break the area-theorem correspondence.
 
-    In the balanced yes/no task, accuracy at the optimal criterion is $\Phi(d'/2)$. Compare these values above. Vary the location parameters; vary the scales only after considering the unequal-variance note above.
+    In the balanced yes/no task, accuracy at the optimal criterion is $\Phi(d'/2)$. **In plain language:** the midpoint criterion in Figure 1 lies halfway between the peaks, so it is $d'/2$ standard deviations from either peak; the correct-response chance is the bell-curve area on the correct side of that line. Compare this with Figure 6. Vary the location parameters; vary the scales only after considering the unequal-variance note above.
 
     ### A5. Unequal priors and error costs
 
     Next, let us consider a situation where the signal and noise samples do not have an equal chance of appearing on a given trial. For example, many more trials contain the noise sample than the signal sample. Outside of laboratory experiments, unequal proportions is likely much more common. Think of some examples.
 
-    More generally, choose "signal" when
+    The core idea is simple: say “signal” when the observed evidence is sufficiently more plausible under the signal curve than under the noise curve. “Sufficiently” depends on how often each trial type occurs and how costly each kind of mistake is. The following formula keeps that bookkeeping explicit:
 
     \[
     \Lambda(x)=\frac{f_S(x)}{f_N(x)}>\beta_{\mathrm{optimal}}
@@ -695,7 +809,9 @@ def _(mo):
       \frac{C_{FA}-C_{CR}}{C_M-C_H},
     \]
 
-    where $C_H$, $C_M$, $C_{FA}$, and $C_{CR}$ are the costs of a hit, miss, false alarm, and correct rejection. With equal error costs and equal correct-decision costs, this reduces to $\beta_{\mathrm{optimal}}=P(N)/P(S)$. Thus the accuracy-maximizing threshold is where the prior-weighted densities intersect; $\beta_{\mathrm{optimal}}=3$ in the example below. At that threshold the two classes have equal posterior probability. It is not generally the intersection of the original conditional densities or the midpoint between their means.
+    **In plain language:** $\Lambda(x)$ is the height of the signal curve divided by the height of the noise curve at the observed evidence $x$. The right-hand side is the cutoff: the first ratio reflects how common noise and signal are, and the second reflects the relative consequences of the four outcomes. $C_H$, $C_M$, $C_{FA}$, and $C_{CR}$ denote the costs of a hit, miss, false alarm, and correct rejection.
+
+    With equally costly errors and equally valuable correct decisions, only the base rates remain. In Figure 7A, noise is three times as common as signal, so each curve is scaled by its frequency before finding their crossing. The black point marks the accuracy-maximizing threshold. Figure 7B shows that accuracy peaks at that threshold. It is not generally the crossing of the original unweighted curves or the midpoint between their peaks.
     """)
     return
 
@@ -715,13 +831,13 @@ def _(
     tpr_theoretical,
     x,
 ):
-    plt.figure(figsize=(10, 3))
+    plt.figure(figsize=(12, 4))
     pdf11 = 3 * pdf1 / 4
     pdf22 = 1 * pdf2 / 4
     _percor_theoretical = (np.array(tpr_theoretical) + 3 * (1 - np.array(fpr_theoretical))) / 4
     plt.subplot(1, 2, 1)
-    plt.plot(x, pdf11, label=f'Noise: P(noise) f_noise(x), loc={loc1}, scale={scale1}', color='red')
-    plt.plot(x, pdf22, label=f'Signal: P(signal) f_signal(x), loc={loc2}, scale={scale2}', color='blue')
+    plt.plot(x, pdf11, label='Noise curve × its 3-in-4 chance', color='red')
+    plt.plot(x, pdf22, label='Signal curve × its 1-in-4 chance', color='blue')
     _idx = np.argwhere(np.diff(np.sign(pdf22 - pdf11))).flatten()
     plt.plot(x[_idx], pdf22[_idx], 'ko')
     intersect_point_1 = x[_idx]
@@ -737,16 +853,18 @@ def _(
     assert np.min(
         np.abs(thresholds[np.argmax(_percor_theoretical)] - intersect_point_1)
     ) < 2 * (thresholds[1] - thresholds[0])
-    plt.title('Prior-weighted response densities')
+    plt.title('Figure 7A. Prior-weighted response densities')
     plt.xlabel('x')
     plt.ylabel('Prior-weighted density')
-    plt.legend()
+    plt.legend(fontsize=8, loc='upper right')
     plt.grid(True)
     plt.subplot(1, 2, 2)
     plt.plot(thresholds, _percor_theoretical)
     plt.axvline(intersect_point_1, color='black', linestyle='--')
     plt.xlabel('Threshold')
-    plt.ylabel('Prob. correct')
+    plt.ylabel('Chance of a correct response')
+    plt.title('Figure 7B. Accuracy as the threshold moves')
+    plt.tight_layout()
     plt.show()
     return
 
@@ -758,7 +876,7 @@ def _(mo):
 
     ### A6. A non-Gaussian example
 
-    Finally, let us consider a situation where the two response distributions are skewed rather than normal. See which properties from above are retained and which are affected. In general, each pair of distributions requires a fresh assessment. Here the skew-normal shape parameter <code>a</code> controls skew direction and magnitude.
+    Figure 8 replaces the symmetric bell curves in Figure 1 with skewed evidence distributions. See which properties from above are retained and which are affected. In general, each pair of distributions requires a fresh assessment. Here the skew-normal shape parameter <code>a</code> controls which way each curve leans and how strongly it is skewed.
     """)
     return
 
@@ -781,12 +899,13 @@ def _(np, plt, skewnorm):
     # Compute the PDF values
     plt.plot(x_1, pdf1_1, label=f'Skew-normal noise\na={a1}, loc={loc1_1}, scale={scale1_1}', color='red')
     plt.plot(x_1, pdf2_1, label=f'Skew-normal signal\na={a2}, loc={loc2_1}, scale={scale2_1}', color='blue')
-    plt.title('Skew Normal Distribution')
+    plt.title('Figure 8. A non-Gaussian pair of evidence distributions')
     # Plot the skew normal distributions
     plt.xlabel('x')
-    plt.ylabel('PDF')
+    plt.ylabel('Density')
     plt.legend()
     plt.grid(True)
+    plt.tight_layout()
     plt.show()
     return a1, a2, loc1_1, loc2_1, scale1_1, scale2_1, x_1
 
