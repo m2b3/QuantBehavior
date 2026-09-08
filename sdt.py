@@ -125,7 +125,6 @@ def _(norm, np, plt):
     pdf1 = norm.pdf(x, loc1, scale1)
     pdf2 = norm.pdf(x, loc2, scale2)
     _criterion = (loc1 + loc2) / 2
-    _dprime = (loc2 - loc1) / scale1
     # Compute the PDF values
     plt.figure(figsize=(11, 4))
     plt.plot(x, pdf1, label=f'Noise trials: mean={loc1}, SD={scale1}', color='red')
@@ -176,7 +175,7 @@ def _(norm, np, plt):
     plt.text(
         (loc1 + loc2) / 2,
         1.02 * _arrow_height,
-        f"d' = {_dprime:g} standard deviations",
+        r"$d'$",
         color='purple',
         ha='center',
         va='bottom',
@@ -195,7 +194,7 @@ def _(norm, np, plt):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    **How to read Figure 1.** The red curve shows evidence on noise-only trials and the blue curve shows evidence on signal trials. The black dashed line is the observer's decision threshold: evidence to its right produces a “signal” response. The purple arrow is $d'$, the distance between the two peaks measured in units of their common standard deviation. The standardized criterion $c$ says where the black line lies relative to the midpoint between the peaks. Both measures are explained just below Figure 2.
+    **How to read Figure 1.** The red curve shows evidence on noise-only trials and the blue curve shows evidence on signal trials. The black dashed line is the observer's decision threshold: evidence to its right produces a “signal” response. The purple arrow marks $d'$, the distance between the two peaks measured in units of their common standard deviation. For the particular curves drawn here, that distance happens to be two standard deviations; this is an illustrative choice, not a fixed value of $d'$. The standardized criterion $c$ says where the black line lies relative to the midpoint between the peaks. Both measures are explained just below Figure 2.
 
     The area under the **blue** curve to the right of the black line is the hit rate. The area under the **red** curve to the right is the false-alarm rate. The red area to the left is specificity. These are areas under curves because they represent the chances of observations landing on each side of the decision line.
 
@@ -299,7 +298,7 @@ def _(mo):
        = \frac{\mu_S-\mu_N}{\sigma},
     \]
 
-    **In plain language:** $d'$ is the purple peak-to-peak distance in Figure 1, measured with the bell curves' standard deviation as the ruler. Here the peaks are 20 evidence units apart and the standard deviation is 10, so $d'=2$. The symbol $\Phi^{-1}$ only converts each shaded area to that standard-deviation ruler. Larger $d'$ means less overlap and easier discrimination; moving the black criterion line does not move the peaks and therefore does not change $d'$.
+    **In plain language:** $d'$ is the purple peak-to-peak distance in Figure 1, measured with the bell curves' standard deviation as the ruler. In this illustration the peaks were deliberately placed 20 evidence units apart and the standard deviation was set to 10, so the example has $d'=2$. Other distributions can have other values of $d'$. The symbol $\Phi^{-1}$ only converts each shaded area to that standard-deviation ruler. Larger $d'$ means less overlap and easier discrimination; moving the black criterion line does not move the peaks and therefore does not change $d'$.
 
     Response bias is commonly summarized by
 
