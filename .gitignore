@@ -1,0 +1,7 @@
+qlsc600_2025/
+
+# Caches
+__pycache__/
+__marimo__/
+.cache/
+*.py[cod]
