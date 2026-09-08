@@ -173,12 +173,15 @@ def _(norm, np, plt):
         arrowprops={'arrowstyle': '<->', 'color': 'purple', 'linewidth': 2},
     )
     plt.text(
-        (loc1 + loc2) / 2,
+        loc1 + 0.25 * (loc2 - loc1),
         1.02 * _arrow_height,
         r"$d'$",
         color='purple',
         ha='center',
         va='bottom',
+        fontsize=13,
+        fontweight='bold',
+        bbox={'facecolor': 'white', 'edgecolor': 'none', 'alpha': 0.85, 'pad': 1},
     )
     plt.title('Figure 1. Equal-variance Gaussian evidence in a yes/no task')
     plt.xlabel('Internal evidence')
