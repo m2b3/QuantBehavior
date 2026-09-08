@@ -603,6 +603,24 @@ def _(mo):
     - **Specificity**, also called the **true-negative rate**, asks: *if a person does not have the disease, what is the chance that the test is negative?* Look across the 150 people without disease: the test correctly clears 135 and falsely alarms on 15.
     - **Precision**, also called **positive predictive value (PPV)**, reverses the question: *if the test is positive, what is the chance that the person has the disease?* Look down the 55 positive tests: 40 come from people with disease and 15 do not.
 
+    The same two-by-two arrangement is not limited to medical tests. In a stimulus-detection experiment, “positive” can mean that a stimulus was present and the observer reported seeing it. Reusing the same illustrative counts makes the correspondence visible:
+
+    | What was actually shown? | Observer says “I see it” | Observer says “I don't see it” | Total |
+    |---|---:|---:|---:|
+    | Stimulus present | 40 hits | 10 misses | 50 trials |
+    | Stimulus absent | 15 false alarms | 135 correct rejections | 150 trials |
+    | **Total** | **55 “see it” responses** | **145 “don't see it” responses** | **200 trials** |
+
+    It can also describe discrimination between two stimulus categories. Here we designate clockwise as the “positive” category:
+
+    | What was actually shown? | Observer says “clockwise” | Observer says “counterclockwise” | Total |
+    |---|---:|---:|---:|
+    | Clockwise tilt | 40 hits | 10 misses | 50 trials |
+    | Counterclockwise tilt | 15 false alarms | 135 correct rejections | 150 trials |
+    | **Total** | **55 clockwise responses** | **145 counterclockwise responses** | **200 trials** |
+
+    In the last table, “hit” simply means correctly saying clockwise when clockwise was shown. If counterclockwise were designated “positive” instead, the hit and false-alarm labels would swap categories, but the observations themselves would not change.
+
     Sensitivity/recall and specificity start with what is **actually true** and look across a row. Precision/PPV starts with what the **test said** and looks down a column. This is why PPV changes when disease becomes more or less common, even if the test's sensitivity and specificity do not change.
 
     In SDT language, sensitivity/recall is the hit rate, while one minus specificity is the false-alarm rate. Those two quantities locate a point on the ROC plot. The same table applies to a single-interval A-versus-B task once one category is called “positive.” It does not have the same diagnostic meaning in a standard 2I-2AFC task, because every trial contains a signal somewhere.
