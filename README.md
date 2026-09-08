@@ -10,7 +10,8 @@ to behavior.
 
 Copyright © 2026 Suresh Krishna.
 
-The `sdt.py` notebook as a complete educational work is licensed under
+The `sdt.py`, `sdt.m`, and `sdt.R` documents as complete educational works are
+licensed under
 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 See [LICENSE-CONTENT.md](LICENSE-CONTENT.md) for the exact scope and suggested
 attribution.

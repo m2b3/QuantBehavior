@@ -1,4 +1,10 @@
 %% Signal detection theory: from an ideal observer to psychometric functions
+% Copyright © 2026 Suresh Krishna.
+% Licensed as a complete educational work under CC BY-NC-SA 4.0:
+% https://creativecommons.org/licenses/by-nc-sa/4.0/
+% Attribution details:
+% https://github.com/m2b3/QuantBehavior/blob/main/LICENSE-CONTENT.md
+%
 % Standalone MATLAB/GNU Octave companion to sdt.py.
 %
 % Run this file as a script. It uses Palamedes for the psychometric fit when

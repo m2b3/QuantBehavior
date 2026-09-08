@@ -2,9 +2,9 @@
 
 Copyright © 2026 Suresh Krishna.
 
-Except where otherwise noted, the `sdt.py` notebook as a complete educational
-work—including its explanatory text, instructional organization, original
-visualizations, and rendered output—is licensed under the
+Except where otherwise noted, the `sdt.py`, `sdt.m`, and `sdt.R` documents as
+complete educational works—including their explanatory text, instructional
+organization, original visualizations, and rendered output—are licensed under the
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
 License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
@@ -30,5 +30,6 @@ Please also indicate if you modified the material.
 
 ## Scope
 
-This Creative Commons license applies to the notebook as a complete educational
-work. Third-party materials, if any, remain subject to their respective terms.
+This Creative Commons license applies to all three documents as complete
+educational works. Third-party materials, if any, remain subject to their
+respective terms.
