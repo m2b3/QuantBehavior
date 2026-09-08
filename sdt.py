@@ -36,6 +36,12 @@ def _(mo):
     4. [Fit a psychometric function](#4-fit-a-psychometric-function)
     5. [From SDT to stimulus-dependent psychometric functions](#5-from-sdt-to-stimulus-dependent-psychometric-functions)
     6. [Appendix: selected extensions](#appendix-selected-extensions)
+
+    ---
+
+    © 2026 Suresh Krishna. This educational notebook is licensed under
+    [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+    [Source and attribution details](https://github.com/m2b3/QuantBehavior/blob/main/LICENSE-CONTENT.md).
     """)
     return
 
