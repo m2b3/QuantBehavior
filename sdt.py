@@ -94,6 +94,24 @@ def _(mo):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Three tasks that are easy to confuse
+
+    | Task | What happens on one trial? | What must the observer report? | Most direct summary |
+    |---|---|---|---|
+    | **Yes/no detection** | One observation is shown. The signal may be present or absent. | “Signal present” or “signal absent.” | Hits and false alarms; sensitivity and response criterion. |
+    | **Single-interval 2AFC identification** | One observation is shown. It is either category A or category B; one of them is always present. | “A” or “B”—no “unsure” response. | The same two-by-two outcome table after one category is designated “positive.” A decision criterion can still favor one response. |
+    | **2I-2AFC detection** | Two intervals or locations are shown. One contains the signal and the other contains noise. | Which interval or location contained the signal? | Proportion correct and $d'$; the observer compares two observations. |
+
+    Terminology is not perfectly consistent: **2AFC** is often used as shorthand for the two-interval task. Saying **1I-2AFC** or **2I-2AFC** removes the ambiguity.
+
+    Sensitivity, specificity, recall, precision, and positive predictive value are most natural for yes/no detection or single-interval classification, where “positive” and “negative” outcomes exist. In ordinary 2I-2AFC detection the signal is present on every trial, so the task does not directly answer questions such as “given a positive test, what is the chance that disease is present?” It answers “which of these two observations contained the signal?” Catch trials or a separate yes/no task are needed to estimate detection specificity and predictive value.
+    """)
+    return
+
+
 @app.cell
 def _(norm, np, plt):
     # Generate x values - the response variable takes values from 0 to 100 (arbitrary)
@@ -126,11 +144,11 @@ def _(norm, np, plt):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    One way to do this task is to set a value of a threshold. If the response variable is greater than this value, we say the signal is present, and if not, we say it is absent.
+    One way to do this task is to set a value of a decision threshold. If the response variable is greater than this value, we say the signal is present, and if not, we say it is absent.
 
     More generally, response variables can be multidimensional (in which case the acceptance region may also be multidimensional). The acceptance region can also be much more complex, even in 1 dimension, if the underlying response variable distributions are. Think about these..
 
-    But for now, let us consider the response variable distributions above, and then see what happens as the threshold is varied. Try to predict what happens when you use a very low threshold, a threshold at the intersection point, and a very high threshold..
+    But for now, let us consider the response variable distributions above, and then see what happens as the threshold is varied. A very low decision threshold calls almost everything “signal”: it catches more real signals but also produces more false alarms. A very high threshold does the reverse. This movable **decision threshold** is distinct from a fixed sensory threshold; the historical evidence and low-threshold alternatives are discussed in [Appendix A3](#a3-why-roc-experiments-mattered).
     """)
     return
 
@@ -497,27 +515,27 @@ def _(mo):
 
     [Back to the main model](#1-the-ideal-equal-variance-model)
 
-    ### A1. Estimating SDT measures from response counts
+    ### A1. Reading a two-by-two table in plain language
 
-    | Actual trial | Respond "signal" | Respond "noise" |
-    |---|---:|---:|
-    | Signal | Hit | Miss |
-    | Noise | False alarm | Correct rejection |
+    Imagine a diagnostic study with the following counts:
 
-    Estimate $H=\text{hits}/(\text{hits}+\text{misses})$ and $F=\text{false alarms}/(\text{false alarms}+\text{correct rejections})$, then substitute them into the formulas above. If an observed rate is 0 or 1, its z-score is infinite. A common finite-sample correction is
+    | What is actually true? | Test says “positive” | Test says “negative” | Total |
+    |---|---:|---:|---:|
+    | Disease present | 40 hits | 10 misses | 50 people |
+    | Disease absent | 15 false alarms | 135 correct rejections | 150 people |
+    | **Total** | **55 positive tests** | **145 negative tests** | **200 people** |
 
-    \[
-    \widetilde H=\frac{\text{hits}+0.5}{\text{signal trials}+1},\qquad
-    \widetilde F=\frac{\text{false alarms}+0.5}{\text{noise trials}+1}.
-    \]
+    - **Sensitivity**, also called **recall** or the **true-positive rate**, asks: *if a person has the disease, what is the chance that the test is positive?* In the table, look across the 50 people with disease: the test finds 40 and misses 10.
+    - **Specificity**, also called the **true-negative rate**, asks: *if a person does not have the disease, what is the chance that the test is negative?* Look across the 150 people without disease: the test correctly clears 135 and falsely alarms on 15.
+    - **Precision**, also called **positive predictive value (PPV)**, reverses the question: *if the test is positive, what is the chance that the person has the disease?* Look down the 55 positive tests: 40 come from people with disease and 15 do not.
 
-    Do not confuse hit rate with precision (positive predictive value):
+    Sensitivity/recall and specificity start with what is **actually true** and look across a row. Precision/PPV starts with what the **test said** and looks down a column. This is why PPV changes when disease becomes more or less common, even if the test's sensitivity and specificity do not change.
 
-    \[
-    \text{precision}=\frac{\text{hits}}{\text{hits}+\text{false alarms}}.
-    \]
+    In SDT language, sensitivity/recall is the hit rate, while one minus specificity is the false-alarm rate. Those two quantities locate a point on the ROC plot. The same table applies to a single-interval A-versus-B task once one category is called “positive.” It does not have the same diagnostic meaning in a standard 2I-2AFC task, because every trial contains a signal somewhere.
 
-    Hit and false-alarm rates condition on the true trial type; precision conditions on the response and therefore changes with the signal base rate.
+    There is an important vocabulary trap: clinical **sensitivity** means the hit rate, whereas SDT authors also use “sensitivity” informally for the discriminability index $d'$. They are not the same quantity. Moving the decision threshold changes clinical sensitivity/recall, but it does not change the model's underlying $d'$.
+
+    The code below uses the counts directly. A small finite-sample correction is used only when computing $d'$ and criterion so that an observed “never” or “always” response does not produce an infinite z-score.
     """)
     return
 
@@ -530,6 +548,9 @@ def _(norm, np):
 
     _hit_rate = _hits / (_hits + _misses)
     _false_alarm_rate = _false_alarms / (_false_alarms + _correct_rejections)
+    _specificity = _correct_rejections / (
+        _false_alarms + _correct_rejections
+    )
     _precision = _hits / (_hits + _false_alarms)
 
     # Log-linear correction gives finite z-scores even when a raw rate is 0 or 1.
@@ -545,9 +566,22 @@ def _(norm, np):
     assert np.isfinite(_criterion_observed)
     assert _d_prime_observed > 0
 
-    print(f'Hit rate: {_hit_rate:.3f}; false-alarm rate: {_false_alarm_rate:.3f}')
+    print(
+        f'Sensitivity / recall: among {_hits + _misses} people with disease, '
+        f'{_hits} test positive and {_misses} test negative.'
+    )
+    print(
+        f'Specificity: among {_false_alarms + _correct_rejections} people '
+        f'without disease, {_correct_rejections} test negative and '
+        f'{_false_alarms} test positive.'
+    )
+    print(
+        f'Precision / PPV: among {_hits + _false_alarms} positive tests, '
+        f'{_hits} come from people with disease and {_false_alarms} do not.'
+    )
     print(f"Corrected d': {_d_prime_observed:.3f}; corrected c: {_criterion_observed:.3f}")
-    print(f'Precision: {_precision:.3f}')
+    assert np.isclose(_specificity, 1 - _false_alarm_rate)
+    assert 0 < _precision < 1
     return
 
 
@@ -573,32 +607,43 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### A3. Two-interval, two-alternative forced choice
+    ### A3. Why ROC experiments mattered
+
+    A single hit/false-alarm pair cannot tell us the shape of an ROC. Classic experiments therefore held the signal strength roughly fixed while moving the observer's decision criterion—for example by changing prior probabilities or payoffs—or asked for confidence ratings, which act like several criteria collected in one session. This separates a change in willingness to say “signal” from a change in sensitivity.
+
+    The continuous-evidence SDT model predicts a smooth, bowed ROC. A simple high-threshold model predicts straight-line structure because observations below its sensory threshold are treated as indistinguishable. Tanner and Swets's visual experiments found that yes/no and forced-choice estimates of detectability were mutually consistent, and later experiments found ROC patterns and above-chance second choices that contradicted the simplest high-threshold account. A rating-scale visual experiment by Nachmias and Steinman gave substantially stronger support to statistical-decision theory than to a two-state low-threshold theory.
+
+    This evidence is important but not a proof that every internal distribution is Gaussian. Luce's **low-threshold** model permits noise alone to cross a sensory threshold and predicts two joined ROC segments; it could explain some results that rejected the simpler high-threshold model. Krantz later showed that two-state low-threshold theory could be rejected by some data, while a three-state low-and-high-threshold model could closely resemble unequal-variance Gaussian SDT. ROC experiments therefore support graded evidence and movable decision criteria over the simplest all-or-none account, while detailed model discrimination requires richer data.
+
+    Sources: [Tanner & Swets (1954)](https://doi.org/10.1037/h0058700); [Swets, Tanner, & Birdsall (1961)](https://doi.org/10.1037/h0040547); [Luce (1963)](https://doi.org/10.1037/h0039723); [Nachmias & Steinman (1963)](https://doi.org/10.1364/JOSA.53.001206); [Krantz (1969)](https://doi.org/10.1037/h0027238).
+
+    ### A4. Two-interval, two-alternative forced choice
 
     The vertical line above in the left column is drawn at the intersection point of the two distributions from above.
 
-    Next, let us consider a different task, where on each trial, one gets two-samples,  one from the signal and one from the noise, and one has to determine which one is the one from the signal. An example would be a police line-up with only 1 "foil". Or searching for your friend in a crowd. Etc. Any situation where you know the signal is present, but do not know which of the samples has the signal. (Aside: The relationship of this situation to the one above is like the relationship of a two-sample t-test to a single sample t-test).
+    In this task each trial contains two observations: one from A (the signal) and one from B (the noise). The observer knows A is present and chooses its interval or location. An example is choosing which of two brief intervals contained a faint tone. Unlike yes/no detection, “signal absent” is not an option.
     """)
     return
 
 
 @app.cell
 def _(diff_x, loc1, loc2, math, norm, np, plt, scale1, scale2):
-    #Now consider a two-interval two-alternative forced choice task
-    #Each trial gives two samples,  and one has to decide which is signal and which is noise
-    #Let us look at the distribtion of the difference for (signal-noise) and for (noise-signal);
-    #the latter is just the distribution of -1 multiplied by the former
-    pdf_diff1 = norm.pdf(diff_x, loc2 - loc1, math.sqrt(scale1 ** 2 + scale2 ** 2))
-    pdf_diff2 = norm.pdf(diff_x, loc1 - loc2, math.sqrt(scale1 ** 2 + scale2 ** 2))  #variance of difference is sum of individual variances
-    plt.plot(diff_x, pdf_diff1, color='blue', label='Signal - Noise')
-    plt.plot(diff_x, pdf_diff2, color='red', label='Noise - Signal')
-    plt.title('Difference of Normal Distributions')
-    plt.xlabel('x')
+    # Use D = observation in interval 1 minus observation in interval 2.
+    # A is the signal distribution and B is the noise distribution.
+    _delta = loc2 - loc1
+    _difference_sd = math.sqrt(scale1 ** 2 + scale2 ** 2)
+    pdf_diff1 = norm.pdf(diff_x, _delta, _difference_sd)
+    pdf_diff2 = norm.pdf(diff_x, -_delta, _difference_sd)
+    plt.plot(diff_x, pdf_diff1, color='blue', label='A in interval 1: mean +Δ')
+    plt.plot(diff_x, pdf_diff2, color='red', label='A in interval 2: mean −Δ')
+    plt.axvline(0, color='black', linestyle='--', label='Choose interval 1 if D > 0')
+    plt.title('2I-2AFC decision variable: D = X₁ − X₂')
+    plt.xlabel('Difference D')
     plt.ylabel('PDF')
     plt.legend()
     plt.grid(True)
     plt.show()
-    _percentage_correct = 1 - norm.cdf(0, loc2 - loc1, math.sqrt(scale1 ** 2 + scale2 ** 2))
+    _percentage_correct = 1 - norm.cdf(0, _delta, _difference_sd)
     print(f'Prob. of being correct in 2-I, 2-AFC task: {_percentage_correct:.4f}')
     _dprime_theoretical = (loc2 - loc1) / scale1
     assert np.isclose(
@@ -612,17 +657,33 @@ def _(diff_x, loc1, loc2, math, norm, np, plt, scale1, scale2):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    See how there is no threshold setting here, and no role of response caution. However, there are other confounds and biases, like order effects, tendency to prefer one or other sample etc.
+    Let the mean difference between A and B in a single observation be $\Delta=\mu_A-\mu_B$, and let each observation have variance $\sigma^2$. Define the comparison variable as $D=X_1-X_2$.
 
-    Under the standard assumptions that the two observations are independent draws from the same signal and noise distributions, and that the observer chooses the larger value of the same decision variable, probability correct in a 2I, 2-AFC task equals the area under the ROC curve from the yes/no experiment. For equal-variance Gaussian distributions,
+    - When A is in interval 1, the mean of $D$ is $+\Delta$; when A is in interval 2, it is $-\Delta$. The two distributions of $D$ are therefore separated by $2\Delta$.
+    - Because the two observations are independent, the variance of their difference is the sum of their variances: $\sigma^2+\sigma^2=2\sigma^2$. Its standard deviation is therefore $\sqrt{2}\sigma$.
+    - The choice boundary is zero. Either mean is only $\Delta$ away from that boundary, so its distance in standard-deviation units is $\Delta/(\sqrt{2}\sigma)=d'/\sqrt{2}$.
+
+    That is the simple origin of the $1/\sqrt{2}$ in proportion correct:
 
     \[
-    P(\text{correct in 2AFC})=\mathrm{AUC}=\Phi\left(\frac{d'}{\sqrt{2}}\right).
+    P(\text{correct in 2I-2AFC})=\Phi\left(\frac{d'}{\sqrt{2}}\right).
     \]
+
+    Looking instead at the full separation between the “A in interval 1” and “A in interval 2” distributions gives $2\Delta/(\sqrt{2}\sigma)=\sqrt{2}d'$. These are the same geometry viewed in two ways: distance from either mean to the choice boundary versus distance between the two conditional means.
+
+    Under the standard assumptions—independent observations, the same evidence scale in both tasks, and a rule that chooses the larger observation—the **area theorem** described by Green and Swets says that 2I-2AFC proportion correct also equals the area under the yes/no ROC:
+
+    \[
+    P(X_A>X_B)=P(\text{correct in 2I-2AFC})=\mathrm{AUC}.
+    \]
+
+    This also explains the connection to the Mann–Whitney test. Empirical AUC counts how often an A observation ranks above a B observation across all A–B pairs (with half credit for ties). The Mann–Whitney $U$ statistic counts the same pairwise orderings. The test uses that count to ask whether the groups differ; AUC uses it to describe discrimination on a chance-to-perfect scale. They are closely connected, but an AUC value is an effect-size description rather than the Mann–Whitney significance test itself ([Green & Swets, 1966](https://books.google.com/books?id=fHR9AAAAMAAJ); [Bamber, 1975](https://doi.org/10.1016/0022-2496(75)90001-2)).
+
+    There is no freely movable yes/no criterion in the ideal comparison rule, but order effects, unequal interval noise, or a preference for one interval can still introduce bias and break the area-theorem correspondence.
 
     In the balanced yes/no task, accuracy at the optimal criterion is $\Phi(d'/2)$. Compare these values above. Vary the location parameters; vary the scales only after considering the unequal-variance note above.
 
-    ### A4. Unequal priors and error costs
+    ### A5. Unequal priors and error costs
 
     Next, let us consider a situation where the signal and noise samples do not have an equal chance of appearing on a given trial. For example, many more trials contain the noise sample than the signal sample. Outside of laboratory experiments, unequal proportions is likely much more common. Think of some examples.
 
@@ -695,7 +756,7 @@ def _(mo):
     mo.md(r"""
     Try to understand the plot on the right, and explain why the left and right end of this plot does not lie at 0.5 unlike the situation where the two trial types occurred equally often.
 
-    ### A5. A non-Gaussian example
+    ### A6. A non-Gaussian example
 
     Finally, let us consider a situation where the two response distributions are skewed rather than normal. See which properties from above are retained and which are affected. In general, each pair of distributions requires a fresh assessment. Here the skew-normal shape parameter <code>a</code> controls skew direction and magnitude.
     """)
@@ -758,6 +819,22 @@ def _(a1, a2, auc, loc1_1, loc2_1, np, scale1_1, scale2_1, skewnorm, x_1):
     assert 0 < _roc_auc < 1
     assert np.isclose(_percentage_correct, _roc_auc, atol=0.02)
     print('All internal consistency checks passed.')
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### A7. Selected references
+
+    - Tanner, W. P., Jr., & Swets, J. A. (1954). [A decision-making theory of visual detection](https://doi.org/10.1037/h0058700). *Psychological Review, 61*, 401–409.
+    - Swets, J. A., Tanner, W. P., Jr., & Birdsall, T. G. (1961). [Decision processes in perception](https://doi.org/10.1037/h0040547). *Psychological Review, 68*, 301–340.
+    - Green, D. M., & Swets, J. A. (1966). [*Signal Detection Theory and Psychophysics*](https://books.google.com/books?id=fHR9AAAAMAAJ). Wiley.
+    - Luce, R. D. (1963). [A threshold theory for simple detection experiments](https://doi.org/10.1037/h0039723). *Psychological Review, 70*, 61–79.
+    - Nachmias, J., & Steinman, R. M. (1963). [Study of absolute visual detection by the rating-scale method](https://doi.org/10.1364/JOSA.53.001206). *Journal of the Optical Society of America, 53*, 1206–1213.
+    - Krantz, D. H. (1969). [Threshold theories of signal detection](https://doi.org/10.1037/h0027238). *Psychological Review, 76*, 308–324.
+    - Bamber, D. (1975). [The area above the ordinal dominance graph and the area below the receiver operating characteristic graph](https://doi.org/10.1016/0022-2496(75)90001-2). *Journal of Mathematical Psychology, 12*, 387–415.
+    """)
     return
 
 
