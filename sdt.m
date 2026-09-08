@@ -33,6 +33,23 @@ clc;
 % Our deliberately idealized starting assumptions are Gaussian signal and
 % noise distributions with equal variance, independent stationary trials, one
 % fixed decision criterion, and no stimulus-independent guesses or lapses.
+%
+% Three tasks that are easy to confuse
+% Task                         Trial and response                 Direct summary
+% Yes/no detection             Signal present/absent; say yes/no Hits, false alarms,
+%                                                                d' and criterion
+% Single-interval 2AFC         Category A or B; say A or B       A two-by-two table
+% (identification)                                               after naming one
+%                                                                category "positive"
+% 2I-2AFC detection            Signal in interval 1 or 2;        Proportion correct
+%                              choose its interval                and d'
+%
+% "2AFC" is sometimes shorthand for the two-interval task. Saying 1I-2AFC or
+% 2I-2AFC removes the ambiguity. Sensitivity, specificity, recall, precision,
+% and PPV apply naturally to yes/no detection and single-interval
+% classification. In ordinary 2I-2AFC, a signal occurs somewhere on every
+% trial, so catch trials or a separate yes/no task are needed to estimate
+% detection specificity and predictive value.
 
 x = linspace(0, 100, 1000);
 diffX = linspace(-100, 100, 1000);
@@ -42,26 +59,69 @@ locSignal = 60;
 sdSignal = 10;
 pdfNoise = normal_pdf(x, locNoise, sdNoise);
 pdfSignal = normal_pdf(x, locSignal, sdSignal);
+criterion = (locNoise + locSignal) / 2;
 intersectionPoint = find_curve_crossing(...
     x, pdfSignal - pdfNoise, (locNoise + locSignal) / 2);
 
 figure('Name', 'Equal-variance signal detection model');
-plot(x, pdfNoise, 'r-', 'LineWidth', 2);
 hold on;
-plot(x, pdfSignal, 'b-', 'LineWidth', 2);
+rightOfCriterion = x >= criterion;
+leftOfCriterion = x < criterion;
+arrowHeight = 1.08 * max([pdfNoise, pdfSignal]);
+specificityPatch = fill(...
+    [x(leftOfCriterion), fliplr(x(leftOfCriterion))], ...
+    [pdfNoise(leftOfCriterion), zeros(1, sum(leftOfCriterion))], ...
+    'r', 'FaceAlpha', 0.07, 'EdgeColor', 'none', ...
+    'HandleVisibility', 'off');
+hitPatch = fill(...
+    [x(rightOfCriterion), fliplr(x(rightOfCriterion))], ...
+    [pdfSignal(rightOfCriterion), zeros(1, sum(rightOfCriterion))], ...
+    'b', 'FaceAlpha', 0.20, 'EdgeColor', 'none');
+falseAlarmPatch = fill(...
+    [x(rightOfCriterion), fliplr(x(rightOfCriterion))], ...
+    [pdfNoise(rightOfCriterion), zeros(1, sum(rightOfCriterion))], ...
+    'r', 'FaceAlpha', 0.25, 'EdgeColor', 'none');
+noiseLine = plot(x, pdfNoise, 'r-', 'LineWidth', 2);
+signalLine = plot(x, pdfSignal, 'b-', 'LineWidth', 2);
 plot(intersectionPoint, normal_pdf(intersectionPoint, locSignal, sdSignal), 'ko', ...
-    'MarkerFaceColor', 'k');
-xlabel('Internal response');
+    'MarkerFaceColor', 'k', 'HandleVisibility', 'off');
+criterionLine = plot([criterion, criterion], [0, 1.28 * arrowHeight], ...
+    'k--', 'LineWidth', 1.5);
+purple = [0.45, 0, 0.55];
+plot([locNoise, locSignal], [arrowHeight, arrowHeight], '-', ...
+    'Color', purple, 'LineWidth', 2, 'HandleVisibility', 'off');
+plot(locNoise, arrowHeight, '<', 'Color', purple, ...
+    'MarkerFaceColor', purple, 'HandleVisibility', 'off');
+plot(locSignal, arrowHeight, '>', 'Color', purple, ...
+    'MarkerFaceColor', purple, 'HandleVisibility', 'off');
+text(locNoise + 0.25 * (locSignal - locNoise), 1.02 * arrowHeight, 'd''', ...
+    'Color', purple, 'FontSize', 13, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+    'BackgroundColor', 'white', 'Margin', 1);
+xlabel('Internal evidence');
 ylabel('Density');
-title('Response when signal is present or absent');
-legend(...
+ylim([0, 1.28 * arrowHeight]);
+title('Figure 1. Equal-variance Gaussian evidence in a yes/no task');
+legend([noiseLine, signalLine, criterionLine, hitPatch, falseAlarmPatch], ...
     sprintf('Noise: mean=%g, SD=%g', locNoise, sdNoise), ...
     sprintf('Signal: mean=%g, SD=%g', locSignal, sdSignal), ...
-    'Density intersection', 'Location', 'best');
+    sprintf('Decision criterion k=%g (c=0)', criterion), ...
+    'H: hit area', 'F: false-alarm area', 'Location', 'northwest');
 grid on;
 
-% Respond "signal" when the response exceeds a threshold. Very low thresholds
-% create many hits and false alarms; very high thresholds create few of both.
+% How to read Figure 1: the black dashed line is the decision threshold;
+% evidence to its right produces a "signal" response. The purple arrow marks
+% d', the peak-to-peak distance measured with the common SD as the ruler. The
+% curves drawn here happen to give d'=2 because their peaks are 20 units apart
+% and their SD is 10. That is an illustrative choice, not a fixed value of d'.
+% Criterion c tells us where the black line lies relative to the midpoint.
+% The blue area right of the line is the hit rate H; the red area right of it is
+% the false-alarm rate F; the pale red area left of it is specificity.
+%
+% Figures 2A and 2B move this decision line through every possible position.
+% Very low thresholds create many hits and false alarms; very high thresholds
+% create few of both. This movable decision threshold differs from a fixed
+% sensory threshold; Appendix A3 summarizes the classic ROC evidence.
 % In multidimensional or non-Gaussian problems, the optimal acceptance region
 % can be more complicated than one threshold.
 thresholds = linspace(min(x), max(x), 1000);
@@ -105,8 +165,8 @@ plot(thresholds, pCorrectTheoretical, 'k-', 'LineWidth', 2);
 hold on;
 xline_compatible(intersectionPoint, 'k--');
 xlabel('Threshold');
-ylabel('Probability correct');
-title('Accuracy versus threshold');
+ylabel('Chance of a correct response');
+title('Figure 2A. Accuracy as the decision threshold moves');
 grid on;
 
 subplot(1, 2, 2);
@@ -117,21 +177,32 @@ plot([1, fprSimulation, 0], [1, tprSimulation, 0], 'k--', ...
 plot([0, 1], [0, 1], '-.', 'Color', [0, 0, 0.5], 'LineWidth', 1.5);
 xlim([0, 1]);
 ylim([0, 1]);
-xlabel('False-positive rate = 1 - specificity');
-ylabel('True-positive rate = sensitivity');
-title('Theoretical and simulated ROC');
+xlabel('False-alarm rate (the opposite of specificity)');
+ylabel('Hit rate (sensitivity / recall)');
+title('Figure 2B. The same thresholds traced in ROC space');
 legend('Theoretical', 'Simulation', 'Chance', 'Location', 'southeast');
 grid on;
 
 % Standard SDT measures
-% For criterion k, H = P(X > k | signal) and F = P(X > k | noise).
+% P(X > k | signal) means the chance that signal-trial evidence lands to the
+% right of the decision line: the blue area in Figure 1. Call this H. Replacing
+% signal with noise gives F, the red area to the right of the line.
 % Under the equal-variance Gaussian model:
 %   d'   = Phi^-1(H) - Phi^-1(F) = (mu_signal - mu_noise) / sigma
+% In plain language, d' is the purple peak-to-peak distance in Figure 1, using
+% the common SD as the ruler. Phi^-1 merely converts an area to that SD ruler.
+% Larger d' means less overlap. Moving the criterion does not move the peaks.
+%
 %   c    = -0.5 * (Phi^-1(H) + Phi^-1(F))
+% In plain language, c locates the black line relative to the midpoint: zero at
+% the midpoint, positive when shifted right (conservative), and negative when
+% shifted left (liberal), all measured on the same SD ruler.
+%
 %   beta = f_signal(k) / f_noise(k) = exp(d' * c)
-% c = 0 is unbiased, c > 0 conservative, and c < 0 liberal. With equal
-% priors and equal error costs, the optimal criterion has c = 0 and beta = 1.
-% The likelihood-ratio decision rule is more general than these formulas.
+% In plain language, beta compares the heights of the signal and noise curves
+% at the black line. At their crossing the heights match, so beta=1. With equal
+% priors and costs this crossing maximizes accuracy and c=0. These shortcuts
+% assume equal-variance Gaussians; comparing the two sources remains general.
 
 %% 2. What changes in real observers?
 % The ideal model is a baseline, not a literal description of every observer.
@@ -151,10 +222,13 @@ grid on;
 % different questions and do not rescue a poorly identified design.
 
 %% 3. Simulated yes/no data
-% On signal trials, contrast x raises the mean internal response linearly:
+% The next formula is a compact recipe for the simulation. On signal trials:
 %   X | signal,x ~ Normal(d'(x), 1), with d'(x) = gain * x.
-% Noise-only catch trials have mean zero. The observer says "signal" when X > k.
-% On a lapse trial the response is random.
+% In plain language, draw an evidence value X from a bell curve centered at
+% d'(x) with SD one. Increasing contrast moves its peak right; gain says how
+% far per contrast unit. Noise-only catch trials use a curve centered at zero.
+% The observer says "signal" when X lands right of k, as in Figure 1. Figure 3
+% shows many such trials; lapses occasionally replace this rule with a guess.
 
 rng(604, 'twister');
 contrastLevels = [0.25, 0.5, 1, 2, 4, 8, 12, 16];
@@ -187,15 +261,15 @@ hold on;
 plot(contrastLevels, yesCounts ./ nPerLevel, 'bo', 'MarkerFaceColor', 'b');
 plot(0, falseAlarmRate, 'rx', 'MarkerSize', 10, 'LineWidth', 2);
 xlabel('Contrast (%)');
-ylabel('Proportion "signal" responses');
+ylabel('Chance of a "signal" response');
 ylim([0, 1]);
-title('Simulated yes/no data');
+title('Figure 3. Simulated yes/no responses across contrast');
 legend('Generating model', 'Signal trials', 'Noise-only catch trials', ...
     'Location', 'southeast');
 grid on;
 
-fprintf('Catch trials: %d/%d; F = %.3f\n', ...
-    falseAlarmCount, nCatch, falseAlarmRate);
+fprintf(['Noise-only catch trials: %d of %d produced a ', ...
+    '"signal" response.\n'], falseAlarmCount, nCatch);
 fprintf('Contrast | signal responses / trials\n');
 for i = 1:numel(contrastLevels)
     fprintf('%8.2f | %3d / %d\n', ...
@@ -211,8 +285,14 @@ end
 %
 % Curve choices:
 %   norm     additive Gaussian decision noise: Phi(beta * (x - alpha))
+%            In plain language, response chance is accumulated bell-curve area;
+%            alpha moves the S-curve and beta controls how quickly it rises.
 %   logistic logistic decision noise: 1/(1 + exp(-beta * (x - alpha)))
+%            In plain language, every stimulus step adds a fixed amount to the
+%            response log-odds. It resembles a Gaussian with heavier tails.
 %   weibull  positive intensities: 1 - exp(-(x / alpha)^beta)
+%            In plain language, the chance that every possible detection event
+%            fails shrinks with intensity; alpha sets scale and beta sets shape.
 %
 % The lower and upper error asymptotes are constrained to the same q. For a
 % random-lapse mechanism, the total lapse probability is 2q. Palamedes calls
@@ -288,18 +368,26 @@ plot(fitGrid, fitProbability, 'k-', 'LineWidth', 2);
 hold on;
 plot(contrastLevels, yesCounts ./ nPerLevel, 'bo', 'MarkerFaceColor', 'b');
 xlabel('Contrast (%)');
-ylabel('P("signal" response | signal trial)');
+ylabel('Proportion of signal responses');
 ylim([0, 1]);
-title(sprintf('Grouped-binomial fit: %s', sigmoidName));
+title(sprintf('Figure 4. Psychometric fit (%s link)', sigmoidName));
 legend('Fitted curve', 'Observed proportions', 'Location', 'southeast');
 grid on;
 
 %% 5. From SDT to stimulus-dependent psychometric functions
 % With unit variance and fixed criterion k:
 %   H(x) = Phi(d'(x) - k), and F = Phi(-k).
-% Thus H(x) depends jointly on the decision rule and the transducer mapping the
-% physical stimulus to sensitivity. If d'(x) = gain*x, H(x) is cumulative
-% Gaussian in x. A common nonlinear extension is d'(x) = (gain*x)^p.
+% In plain language, H(x) is the blue area to the right of Figure 1's decision
+% line after contrast moves the blue curve. F is the red area right of the line;
+% here it stays fixed because the noise curve and criterion do not move. Phi
+% converts a horizontal distance into accumulated area under a bell curve.
+%
+% Thus the psychometric curve depends jointly on the decision rule and the
+% transducer mapping stimulus to d'. If d'(x)=gain*x, each contrast step moves
+% the signal peak equally and H(x) is cumulative Gaussian. A common extension:
+%   d'(x) = (gain*x)^p.
+% In plain language, gain controls overall peak separation and p lets that
+% separation grow faster or slower than a straight line. Figure 5 plots it.
 %
 % Fit signal and noise responses jointly when asking whether a manipulation
 % changes gain, exponent, criterion, or lapse rate. If false-alarm rate or
@@ -322,19 +410,48 @@ hold on;
 plot(contrastLevels, trueDprime, 'k-', 'LineWidth', 2);
 xlabel('Contrast (%)');
 ylabel('d''');
-title('Stimulus-dependent sensitivity');
-legend('Estimated from H and F', ...
+title('Figure 5. Sensitivity grows with contrast');
+legend('Estimated d'' from hit and false-alarm areas', ...
     sprintf('Generating d'' = %.2f x', gainTrue), 'Location', 'northwest');
 grid on;
 
-%% Appendix A1. Estimating SDT measures from response counts
-%                Respond "signal"  Respond "noise"
-% Actual signal       Hit               Miss
-% Actual noise        False alarm       Correct rejection
+%% Appendix A1. Reading a two-by-two table in plain language
+% Diagnostic example:
+% Actual state       Test positive       Test negative       Total
+% Disease present    40 hits             10 misses           50
+% Disease absent     15 false alarms     135 correct rejects 150
+% Total              55                  145                 200
 %
-% H conditions on signal trials; F conditions on noise trials. Precision,
-% hits/(hits + false alarms), instead conditions on the response and therefore
-% changes with the signal base rate.
+% Sensitivity/recall asks: among the 50 people with disease, how many test
+% positive? Look across that row: 40 are found and 10 are missed.
+% Specificity asks: among the 150 people without disease, how many test
+% negative? Look across that row: 135 are cleared and 15 falsely alarm.
+% Precision/PPV reverses the question: among the 55 positive tests, how many
+% actually have disease? Look down that column: 40 do and 15 do not.
+%
+% The same arrangement describes stimulus detection:
+% Actual stimulus    Say "I see it"      Say "I don't see it" Total
+% Present            40 hits             10 misses            50
+% Absent             15 false alarms     135 correct rejects  150
+% Total              55                  145                  200
+%
+% It also describes two-category discrimination when clockwise is designated
+% the "positive" category:
+% Actual tilt        Say "clockwise"     Say "counterclockwise" Total
+% Clockwise          40 hits             10 misses               50
+% Counterclockwise   15 false alarms     135 correct rejects     150
+% Total              55                  145                     200
+% Calling counterclockwise "positive" would swap the outcome labels, not the
+% observations. The positive category is bookkeeping, not a special stimulus.
+%
+% Sensitivity/recall and specificity begin with the actual state and look
+% across a row. Precision/PPV begins with the response and looks down a column;
+% it therefore changes with the signal base rate. In SDT, sensitivity/recall is
+% H and one minus specificity is F. Clinical "sensitivity" (H) is not the same
+% as the SDT discriminability index d': moving criterion changes H, not d'.
+%
+% The log-linear correction below is used only for d' and c, preventing an
+% observed "never" or "always" response from producing an infinite z-score.
 
 hits = 40;
 misses = 10;
@@ -342,6 +459,7 @@ falseAlarms = 15;
 correctRejections = 135;
 hitRate = hits / (hits + misses);
 falseAlarmRateExample = falseAlarms / (falseAlarms + correctRejections);
+specificity = correctRejections / (falseAlarms + correctRejections);
 precision = hits / (hits + falseAlarms);
 hitRateCorrectedExample = (hits + 0.5) / (hits + misses + 1);
 faRateCorrectedExample = ...
@@ -351,59 +469,144 @@ zFalseAlarm = normal_inv(faRateCorrectedExample);
 dprimeObserved = zHit - zFalseAlarm;
 criterionObserved = -0.5 * (zHit + zFalseAlarm);
 assert(isfinite(dprimeObserved) && isfinite(criterionObserved) && ...
-    dprimeObserved > 0, 'The observed-count SDT example is inconsistent.');
+    dprimeObserved > 0 && ...
+    abs(specificity - (1 - falseAlarmRateExample)) < 1e-12 && ...
+    precision > 0 && precision < 1, ...
+    'The observed-count SDT example is inconsistent.');
 
-fprintf('Hit rate: %.3f; false-alarm rate: %.3f\n', ...
-    hitRate, falseAlarmRateExample);
-fprintf('Corrected d'': %.3f; corrected c: %.3f; precision: %.3f\n', ...
-    dprimeObserved, criterionObserved, precision);
+fprintf(['Sensitivity / recall: among %d people with disease, ', ...
+    '%d test positive and %d test negative.\n'], hits + misses, hits, misses);
+fprintf(['Specificity: among %d people without disease, ', ...
+    '%d test negative and %d test positive.\n'], ...
+    falseAlarms + correctRejections, correctRejections, falseAlarms);
+fprintf(['Precision / PPV: among %d positive tests, ', ...
+    '%d come from people with disease and %d do not.\n'], ...
+    hits + falseAlarms, hits, falseAlarms);
+fprintf('Corrected d'': %.3f; corrected c: %.3f\n', ...
+    dprimeObserved, criterionObserved);
 
 %% Appendix A2. Unequal variance and alternative sensitivity indices
 % If sigma_signal ~= sigma_noise, Phi^-1(H)-Phi^-1(F) varies with criterion.
 % The zROC follows:
 %   Phi^-1(H) = (mu_signal-mu_noise)/sigma_signal
 %               + (sigma_noise/sigma_signal) * Phi^-1(F).
-% Its slope is sigma_noise/sigma_signal, not 1. The log likelihood ratio is
-% quadratic, so an optimal decision region can require two crossings. ROC/AUC
-% and the general likelihood-ratio rule remain valid. A', d_a, and equal-
-% variance d' have different interpretations and should be labelled clearly.
+% In plain language, Phi^-1 redraws each ROC axis with an SD ruler, making the
+% ROC a line. Its tilt is sigma_noise/sigma_signal; equal widths give one. If
+% widths differ, peak-distance d' depends on which spread is used. The log
+% likelihood ratio is curved and can cross the cutoff twice, so "signal" need
+% not mean every value right of one line. ROC/AUC and the general rule remain
+% valid. A', d_a, and equal-variance d' have different interpretations.
 
-%% Appendix A3. Two-interval, two-alternative forced choice
-% Each trial contains one signal and one noise sample; choose the larger. Under
-% independent draws from the same decision variable there is no criterion/caution
-% term, although order and response biases may remain.
+%% Appendix A3. Why ROC experiments mattered
+% A single H,F pair cannot reveal ROC shape. Classic experiments held signal
+% strength roughly fixed while moving criterion through priors/payoffs, or used
+% confidence ratings as several criteria. This separates willingness to say
+% "signal" from sensitivity. Continuous-evidence SDT predicts a smooth bowed
+% ROC; the simplest high-threshold theory predicts straight-line structure.
+% Yes/no and forced-choice detectability agreed, rating ROCs favored graded
+% evidence, and above-chance second choices challenged the simplest all-or-none
+% account. Luce's low-threshold model and later multi-state threshold models
+% show that these results do not prove every internal distribution is Gaussian.
+% Rich ROC data are needed for detailed model discrimination.
+% Sources: Tanner & Swets (1954), doi:10.1037/h0058700; Swets, Tanner, &
+% Birdsall (1961), doi:10.1037/h0040547; Luce (1963), doi:10.1037/h0039723;
+% Nachmias & Steinman (1963), doi:10.1364/JOSA.53.001206; Krantz (1969),
+% doi:10.1037/h0027238.
+
+%% Appendix A4. Two-interval, two-alternative forced choice
+% Each trial contains one A/signal and one B/noise observation. The observer
+% knows A is present and chooses its interval; "signal absent" is not an option.
+% Figure 6 plots D = interval-1 observation minus interval-2 observation. Blue
+% is A in interval 1, red is A in interval 2, and zero separates the choices.
 
 sdDifference = sqrt(sdNoise^2 + sdSignal^2);
+deltaDifference = locSignal - locNoise;
 pdfSignalMinusNoise = normal_pdf(...
-    diffX, locSignal - locNoise, sdDifference);
+    diffX, deltaDifference, sdDifference);
 pdfNoiseMinusSignal = normal_pdf(...
-    diffX, locNoise - locSignal, sdDifference);
+    diffX, -deltaDifference, sdDifference);
 
 figure('Name', 'Two-interval two-alternative forced choice');
-plot(diffX, pdfSignalMinusNoise, 'b-', 'LineWidth', 2);
 hold on;
-plot(diffX, pdfNoiseMinusSignal, 'r-', 'LineWidth', 2);
-xlabel('Difference');
+rightOfZero = diffX >= 0;
+leftOfZero = diffX <= 0;
+differenceArrowHeight = 1.08 * max(...
+    [pdfSignalMinusNoise, pdfNoiseMinusSignal]);
+correctInterval1Patch = fill(...
+    [diffX(rightOfZero), fliplr(diffX(rightOfZero))], ...
+    [pdfSignalMinusNoise(rightOfZero), zeros(1, sum(rightOfZero))], ...
+    'b', 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+correctInterval2Patch = fill(...
+    [diffX(leftOfZero), fliplr(diffX(leftOfZero))], ...
+    [pdfNoiseMinusSignal(leftOfZero), zeros(1, sum(leftOfZero))], ...
+    'r', 'FaceAlpha', 0.18, 'EdgeColor', 'none');
+interval1Line = plot(diffX, pdfSignalMinusNoise, 'b-', 'LineWidth', 2);
+interval2Line = plot(diffX, pdfNoiseMinusSignal, 'r-', 'LineWidth', 2);
+choiceLine = plot([0, 0], [0, 1.28 * differenceArrowHeight], ...
+    'k--', 'LineWidth', 1.5);
+plot([-deltaDifference, deltaDifference], ...
+    [differenceArrowHeight, differenceArrowHeight], '-', ...
+    'Color', purple, 'LineWidth', 2, 'HandleVisibility', 'off');
+plot(-deltaDifference, differenceArrowHeight, '<', 'Color', purple, ...
+    'MarkerFaceColor', purple, 'HandleVisibility', 'off');
+plot(deltaDifference, differenceArrowHeight, '>', 'Color', purple, ...
+    'MarkerFaceColor', purple, 'HandleVisibility', 'off');
+text(-deltaDifference / 2, 1.02 * differenceArrowHeight, ...
+    '2 Delta between conditional means', 'Color', purple, ...
+    'FontWeight', 'bold', 'HorizontalAlignment', 'center', ...
+    'VerticalAlignment', 'bottom', 'BackgroundColor', 'white', 'Margin', 1);
+xlabel('Difference D');
 ylabel('Density');
-title('Difference distributions in 2I-2AFC');
-legend('Signal - noise', 'Noise - signal', 'Location', 'best');
+ylim([0, 1.28 * differenceArrowHeight]);
+title('Figure 6. 2I-2AFC decision variable: D = X_1 - X_2');
+legend([interval1Line, interval2Line, choiceLine, ...
+    correctInterval1Patch, correctInterval2Patch], ...
+    'A in interval 1: mean +Delta', 'A in interval 2: mean -Delta', ...
+    'Choose interval 1 if D > 0', 'Correct area: A in interval 1', ...
+    'Correct area: A in interval 2', 'Location', 'best');
 grid on;
 
-pCorrect2afc = 1 - normal_cdf(0, locSignal - locNoise, sdDifference);
+pCorrect2afc = 1 - normal_cdf(0, deltaDifference, sdDifference);
 fprintf('Probability correct in 2I-2AFC: %.4f\n', pCorrect2afc);
-% Under the standard assumptions, P(correct in 2AFC) = AUC = Phi(d'/sqrt(2)).
-% Balanced yes/no accuracy at the optimal criterion is Phi(d'/2).
+% Why 1/sqrt(2)? When A is in interval 1, mean(D)=+Delta; when it is in
+% interval 2, mean(D)=-Delta, so the two D curves are 2*Delta apart.
+% Independent observations add their variances: sigma^2+sigma^2=2*sigma^2,
+% making SD(D)=sqrt(2)*sigma. Either mean is Delta from the zero boundary, so
+% its standardized distance is Delta/(sqrt(2)*sigma)=d'/sqrt(2):
+%   P(correct in 2I-2AFC) = Phi(d'/sqrt(2)).
+% In plain language, this is the blue area right of zero in Figure 6 (and the
+% symmetric red area left). The full distance between D curves is sqrt(2)*d';
+% that is the same geometry viewed peak-to-peak instead of peak-to-boundary.
+%
+% Green and Swets's area theorem says, under the standard assumptions:
+%   P(X_A > X_B) = P(correct in 2I-2AFC) = AUC.
+% In plain language, this is the chance that a random A observation produces
+% more evidence than a random B observation. Empirical AUC and Mann-Whitney U
+% count the same A-B orderings (half credit for ties). U tests group difference;
+% AUC describes discrimination. See Green & Swets (1966), Signal Detection
+% Theory and Psychophysics, and Bamber (1975), doi:10.1016/0022-2496(75)90001-2.
+% Order effects, unequal interval noise, or interval preference can add bias and
+% break the area-theorem correspondence.
+%
+% Balanced yes/no accuracy at the midpoint criterion is Phi(d'/2). In plain
+% language, Figure 1's line is half the peak separation from either peak, and
+% accuracy is the bell-curve area on the correct side of that line.
 assert(abs(pCorrect2afc - aucAnalytic) < 1e-12, ...
     'The 2AFC probability is inconsistent with its analytic value.');
 assert(abs(pCorrect2afc - rocAuc) < 5e-4, ...
     'The 2AFC probability and numerical ROC AUC should agree.');
 
-%% Appendix A4. Unequal priors and error costs
-% Choose signal when the likelihood ratio exceeds
+%% Appendix A5. Unequal priors and error costs
+% Say "signal" when the evidence is sufficiently more plausible under the
+% signal curve. "Sufficiently" depends on base rates and mistake costs:
 %   beta_optimal = P(noise)/P(signal) *
 %                  (C_FA-C_CR)/(C_M-C_H).
-% With equal error costs and P(noise)=3/4, P(signal)=1/4, beta_optimal=3.
-% The accuracy-maximizing threshold is where prior-weighted densities cross.
+% In plain language, the likelihood ratio is signal-curve height divided by
+% noise-curve height at the observation. The first ratio on the right describes
+% how common each source is; the second describes consequences of the outcomes.
+% With equal costs and P(noise)=3/4, P(signal)=1/4, beta_optimal=3. Figure 7A
+% scales each curve by its frequency; their crossing maximizes accuracy, as
+% Figure 7B shows. It need not be the unweighted crossing or mean midpoint.
 
 priorNoise = 3 / 4;
 priorSignal = 1 / 4;
@@ -433,8 +636,9 @@ plot(weightedIntersection, ...
     'ko', 'MarkerFaceColor', 'k');
 xlabel('Internal response');
 ylabel('Prior-weighted density');
-title('Prior-weighted response densities');
-legend('P(noise) f_{noise}', 'P(signal) f_{signal}', ...
+title('Figure 7A. Prior-weighted response densities');
+legend('Noise curve x its 3-in-4 chance', ...
+    'Signal curve x its 1-in-4 chance', ...
     'Weighted intersection', 'Location', 'best');
 grid on;
 
@@ -443,14 +647,16 @@ plot(thresholds, pCorrectUnequal, 'k-', 'LineWidth', 2);
 hold on;
 xline_compatible(weightedIntersection, 'k--');
 xlabel('Threshold');
-ylabel('Probability correct');
-title('Accuracy with P(noise) = 3/4');
+ylabel('Chance of a correct response');
+title('Figure 7B. Accuracy as the threshold moves');
 grid on;
 
-%% Appendix A5. A non-Gaussian example
-% The skew-normal density is 2*phi(z)*Phi(a*z)/scale. Small local functions
-% below implement its density, CDF, and random generator so that neither the
-% Statistics Toolbox nor another package is required.
+%% Appendix A6. A non-Gaussian example
+% Figure 8 replaces Figure 1's symmetric bell curves with skewed evidence
+% distributions. The skew-normal shape parameter a controls the direction and
+% degree of leaning. Its density is 2*phi(z)*Phi(a*z)/scale. Small local
+% functions below implement the density, CDF, and random generator so neither
+% the Statistics Toolbox nor another package is required.
 
 xSkew = linspace(0, 100, 1000);
 shapeNoise = 2;
@@ -470,7 +676,7 @@ hold on;
 plot(xSkew, pdfSignalSkew, 'b-', 'LineWidth', 2);
 xlabel('Internal response');
 ylabel('Density');
-title('Skew-normal response distributions');
+title('Figure 8. A non-Gaussian pair of evidence distributions');
 legend(...
     sprintf('Noise: a=%g, loc=%g, scale=%g', ...
         shapeNoise, locNoiseSkew, scaleNoiseSkew), ...
