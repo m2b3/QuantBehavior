@@ -1,7 +1,7 @@
 import numpy as np
 
 from dashboard.data import apply_analysis_profile, load_trials
-from reconcile_exp1 import score_candidate
+from other.reconcile_exp1 import score_candidate
 
 
 def test_figure_aligned_profile_improves_exp1_source_match():

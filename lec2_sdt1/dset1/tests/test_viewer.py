@@ -1,4 +1,4 @@
-from viewer import app
+from other.viewer import app
 
 
 def test_marimo_viewer_renders_default_state():
