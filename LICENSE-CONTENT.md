@@ -2,9 +2,10 @@
 
 Copyright © 2026 Suresh Krishna.
 
-Except where otherwise noted, the `sdt.py`, `sdt.m`, and `sdt.R` documents as
-complete educational works—including their explanatory text, instructional
-organization, original visualizations, and rendered output—are licensed under the
+Except where otherwise noted, the `sdt.py`, `sdt.m`, `sdt.R`, and
+`statistical_pitfalls.py` documents as complete educational works—including their
+explanatory text, instructional organization, original visualizations, and
+rendered output—are licensed under the
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
 License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
