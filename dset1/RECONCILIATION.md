@@ -53,3 +53,39 @@ The viewer defaults to a transparent **figure-aligned approximation**:
 - Experiments 2a and 2b: retain all deposited rows; these reproduce the corresponding source d-primes exactly.
 
 The viewer also offers **all deposited rows**. Criterion is computed from raw responses under the selected profile and is never presented as a value recovered from the `.mat` files.
+
+## Data-audit addendum: participant reordering and S07
+
+For practical reconciliation, participant rows may be treated as reordered between the Experiment 1 CSV export and the processed source arrays. Under the `<350 ms` profile, the minimum-error one-to-one assignment is:
+
+| CSV participant | Processed source row | Agreement |
+|---|---:|---|
+| S01–S06 | 1–6, respectively | Close |
+| S08 | 10 | Close |
+| S09 | 8 | Close |
+| S10 | 7 | Close |
+| S07 | 9 | Poor; this is the remaining assignment |
+
+With this reordering, nine participants have a mean d-prime absolute error of 0.0270 across their 36 cells. The remaining CSV participant, S07, has a mean error of about 0.57 against its best available source row. It is therefore described as **unreconciled**, not invalid or excluded.
+
+### Is CSV S07 behaviorally unusual?
+
+Not at the aggregate level. Under the adopted profile, S07 retains 2,500 trials and falls within the ordinary range of the other nine CSV participants:
+
+| Summary measure | CSV S07 | Standardized against the other nine |
+|---|---:|---:|
+| Overall d-prime | 1.334 | +0.24 SD |
+| Valid d-prime | 2.408 | +0.92 SD |
+| Neutral d-prime | 1.333 | −0.06 SD |
+| Invalid d-prime | 0.262 | −0.69 SD |
+| Valid − invalid d-prime | 2.146 | +0.91 SD |
+| Overall criterion | 0.035 | +0.29 SD |
+| Valid − invalid criterion | 0.023 | +0.12 SD |
+
+The detailed profile is somewhat irregular: 6 of its 36 condition-by-contrast d-primes are more than 2 SD from the corresponding values of the other nine participants, with a maximum absolute deviation of 2.53 SD. These deviations occur in both directions rather than reflecting uniformly poor sensitivity or a uniformly shifted response criterion.
+
+### Interpretation
+
+Once row reordering is allowed, the evidence does not show a general Experiment 1 participant-label failure. It shows nine closely reconcilable datasets and one unreconciled dataset. Because the CSV lacks blink flags, fixation traces, target coordinates, and target-relative landing error, additional offline exclusions could plausibly account for the remaining participant's detailed mismatch. The available source files contain only processed d-prime values and cannot test that explanation.
+
+S07 should therefore remain in the primary raw-CSV criterion analysis. A leave-S07-out result can be reported as a sensitivity analysis, but the source mismatch alone is not a principled exclusion criterion.
