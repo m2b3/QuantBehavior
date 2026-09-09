@@ -13,6 +13,11 @@ Open the local URL printed by Marimo (normally <http://127.0.0.1:2718>).
 
 To inspect or modify the reactive notebook, run `marimo edit viewer.py` instead.
 
+The publication explorer uses `public/source_data.json`, an exact,
+browser-safe snapshot of the deposited compressed MATLAB matrices. The native
+test suite verifies every snapshot value against the original `.mat` files;
+this avoids a SciPy/Pyodide decompression failure when the viewer runs as WASM.
+
 ## What the viewer contains
 
 - **Signal detection:** recomputes d-prime, criterion, accuracy, hit rate, false-alarm rate, and latency summaries from the subject CSVs. Controls cover experiment, trial-inclusion profile, plotted dimension, condition splits, participants, extreme-rate correction, signal-code convention, minimum cell size, uncertainty, and participant overlays.

@@ -1,7 +1,14 @@
 import numpy as np
 import pandas as pd
+from scipy.io import loadmat
 
-from dashboard.data import apply_analysis_profile, compute_sdt, load_trials
+from dashboard.data import (
+    SOURCE_DIR,
+    apply_analysis_profile,
+    compute_sdt,
+    load_mat_struct,
+    load_trials,
+)
 
 
 def test_decoded_response_matches_correctness():
@@ -75,3 +82,14 @@ def test_figure_aligned_profile_only_filters_late_exp1_saccades():
 def test_all_rows_profile_is_non_filtering():
     trials = load_trials()
     assert len(apply_analysis_profile(trials, "all_rows")) == len(trials)
+
+
+def test_publication_snapshot_matches_deposited_mat_files():
+    for path in sorted(SOURCE_DIR.glob("*.mat")):
+        stem = path.stem
+        original = loadmat(path)[stem][0, 0]
+        snapshot = load_mat_struct(stem)
+
+        assert set(snapshot) == set(original.dtype.names)
+        for field in original.dtype.names:
+            np.testing.assert_array_equal(snapshot[field], original[field])

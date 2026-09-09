@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.io import loadmat
 from scipy.stats import norm
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "osfstorage" / "Data"
 SOURCE_DIR = ROOT / "osfstorage" / "Code" / "Source Data"
+PUBLICATION_SOURCE = ROOT / "public" / "source_data.json"
 
 RAW_COLUMNS = [
     "block",
@@ -210,9 +211,23 @@ def compute_sdt(
 
 @lru_cache(maxsize=None)
 def load_mat_struct(stem: str) -> dict[str, np.ndarray]:
-    path = SOURCE_DIR / f"{stem}.mat"
-    raw = loadmat(path)[stem][0, 0]
-    return {name: np.asarray(raw[name], dtype=float) for name in raw.dtype.names}
+    """Load a browser-safe snapshot of a deposited MATLAB source struct.
+
+    The deposited v5 MAT files use per-variable zlib compression. SciPy's
+    compressed MAT reader can reject those valid streams under Pyodide/WASM,
+    so the viewer reads an equivalent JSON snapshot instead. The original MAT
+    files remain the source of record and are regression-checked against this
+    snapshot in the native test suite.
+    """
+    with PUBLICATION_SOURCE.open(encoding="utf-8") as source_file:
+        publication_data = json.load(source_file)
+    try:
+        source = publication_data[stem]
+    except KeyError as exc:
+        raise ValueError(f"Unknown publication source {stem!r}") from exc
+    return {
+        name: np.asarray(values, dtype=float) for name, values in source.items()
+    }
 
 
 def dataset_summary() -> dict[str, int]:

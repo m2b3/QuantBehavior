@@ -805,7 +805,8 @@ def _(box, mo, pd):
               <li>Criterion is added using the standard equal-variance
               definition c = −½[z(H)+z(FA)]. It was not reported in the paper.</li>
               <li>Raw-data group summaries are participant-first. Publication
-              explorer reads the supplied .mat source matrices.</li>
+              explorer reads a value-for-value, browser-safe snapshot of the
+              supplied .mat source matrices.</li>
               <li>The default figure-aligned profile retains Experiment 1
               neutral trials and saccade trials with deposited latency &lt;350
               ms. This cutoff was inferred by minimizing d′ error against
