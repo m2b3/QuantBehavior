@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./favicon.ico" />
+    <!-- Preload is necessary because we show these images when we disconnect from the server,
+    but at that point we cannot load these images from the server -->
+    <link rel="preload" href="./assets/gradient-yHQUC_QB.png" as="image" />
+    <link rel="preload" href="./assets/noise-60BoTA8O.png" as="image" />
+    <!-- Preload the fonts -->
+    <link rel="preload" href="./assets/Lora-VariableFont_wght-CZceb_kH.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="./assets/PTSans-Regular-Bam3NpBI.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="./assets/PTSans-Bold-C_DwAp7Z.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="./assets/FiraMono-Regular-CEsLFVD9.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="./assets/FiraMono-Medium-D5MAsWEG.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="./assets/FiraMono-Bold-C6PDArdf.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="a marimo app" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.json" />
+
+    <script data-marimo="true">
+      function __resizeIframe(obj) {
+        const scrollbarHeight = 20; // Max between windows, mac, and linux
+
+        function setHeight() {
+          // Guard against race condition where iframe isn't ready
+          if (!obj.contentWindow?.document?.documentElement) {
+            return;
+          }
+          const element = obj.contentWindow.document.documentElement;
+          // If there is no vertical scrollbar, we don't need to resize the iframe
+          if (element.scrollHeight === element.clientHeight) {
+            return;
+          }
+
+          // Create a new height that includes the scrollbar height if it's visible
+          const hasHorizontalScrollbar = element.scrollWidth > element.clientWidth;
+          const newHeight = element.scrollHeight + (hasHorizontalScrollbar ? scrollbarHeight : 0);
+
+          // Only update the height if it's different from the current height
+          if (obj.style.height !== `${newHeight}px`) {
+            obj.style.height = `${newHeight}px`;
+          }
+        }
+
+        // Resize the iframe to the height of the content and bottom scrollbar height
+        setHeight();
+
+        // Resize the iframe when the content changes
+        const resizeObserver = new ResizeObserver((_entries) => {
+          setHeight();
+        });
+        // Only observe if iframe content is ready
+        if (obj.contentWindow?.document?.body) {
+          resizeObserver.observe(obj.contentWindow.document.body);
+        }
+      }
+    </script>
+    <marimo-filename hidden>notebook.py</marimo-filename>
+    <!-- TODO(Trevor): Legacy, required by VS Code plugin. Remove when plugin is updated (see marimo/server/_templates/template.py) -->
+    <marimo-version data-version="{{ version }}" hidden></marimo-version>
+    <marimo-user-config data-config="{{ user_config }}" hidden></marimo-user-config>
+    <marimo-server-token data-token="{{ server_token }}" hidden></marimo-server-token>
+    <!-- /TODO -->
+    <title>dset1 analysis</title>
+    <script type="module" crossorigin src="./assets/index-C5WESBbZ.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/preload-helper-BPPi7vOr.js">
+    <link rel="modulepreload" crossorigin href="./assets/objects-CrbstYTV.js">
+    <link rel="modulepreload" crossorigin href="./assets/chunk-C4rtOYze.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-C60yClUi.js">
+    <link rel="modulepreload" crossorigin href="./assets/compiler-runtime-DnimoHo0.js">
+    <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-3wZU7vFS.js">
+    <link rel="modulepreload" crossorigin href="./assets/useEventListener-DpNnLPuE.js">
+    <link rel="modulepreload" crossorigin href="./assets/defaultLocale-CGJY8D9C.js">
+    <link rel="modulepreload" crossorigin href="./assets/precisionRound-DQz5N1zm.js">
+    <link rel="modulepreload" crossorigin href="./assets/defaultLocale-DzliDDTm.js">
+    <link rel="modulepreload" crossorigin href="./assets/vega-loader.browser-DLY285WP.js">
+    <link rel="modulepreload" crossorigin href="./assets/tooltip-BUmTS76K.js">
+    <link rel="modulepreload" crossorigin href="./assets/clsx-Dz_KRrWq.js">
+    <link rel="modulepreload" crossorigin href="./assets/cn-DCUzRj2J.js">
+    <link rel="modulepreload" crossorigin href="./assets/badge-D28DMr4y.js">
+    <link rel="modulepreload" crossorigin href="./assets/button-W__YVea9.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-dom-Ba2zmJWD.js">
+    <link rel="modulepreload" crossorigin href="./assets/fullscreen-CrevbcR_.js">
+    <link rel="modulepreload" crossorigin href="./assets/menu-items-B8lIBnFI.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-CFnrytEJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/createLucideIcon-B8oVfJNp.js">
+    <link rel="modulepreload" crossorigin href="./assets/check-CyyJPf_5.js">
+    <link rel="modulepreload" crossorigin href="./assets/x-4y-nyVDU.js">
+    <link rel="modulepreload" crossorigin href="./assets/select-CPo-KTTe.js">
+    <link rel="modulepreload" crossorigin href="./assets/tooltip-C9LWGQ7Y.js">
+    <link rel="modulepreload" crossorigin href="./assets/use-toast-DjpWVza6.js">
+    <link rel="modulepreload" crossorigin href="./assets/useEvent-GCVIknuR.js">
+    <link rel="modulepreload" crossorigin href="./assets/invariant-BUdrueMv.js">
+    <link rel="modulepreload" crossorigin href="./assets/isObject-DvLSfCY5.js">
+    <link rel="modulepreload" crossorigin href="./assets/isArrayLikeObject-Dqg6_6m7.js">
+    <link rel="modulepreload" crossorigin href="./assets/_initCloneObject-7OOScFCJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/merge-BK1opWhR.js">
+    <link rel="modulepreload" crossorigin href="./assets/zod-BIDX-mZr.js">
+    <link rel="modulepreload" crossorigin href="./assets/utils-C8Yt16Y7.js">
+    <link rel="modulepreload" crossorigin href="./assets/constants-DifUxsbZ.js">
+    <link rel="modulepreload" crossorigin href="./assets/session-D-SddyN0.js">
+    <link rel="modulepreload" crossorigin href="./assets/Deferred-CP7vq682.js">
+    <link rel="modulepreload" crossorigin href="./assets/config-EoJoeZuK.js">
+    <link rel="modulepreload" crossorigin href="./assets/uuid-e9lSomwA.js">
+    <link rel="modulepreload" crossorigin href="./assets/DeferredRequestRegistry-6TRSC3VZ.js">
+    <link rel="modulepreload" crossorigin href="./assets/requests-B9zEd_sW.js">
+    <link rel="modulepreload" crossorigin href="./assets/useLifecycle-DDwuYzlC.js">
+    <link rel="modulepreload" crossorigin href="./assets/useNonce-C2dwX-sI.js">
+    <link rel="modulepreload" crossorigin href="./assets/useTheme-CwCyrmDf.js">
+    <link rel="modulepreload" crossorigin href="./assets/arrays-UzzAzxsG.js">
+    <link rel="modulepreload" crossorigin href="./assets/strings-DmKKoXrM.js">
+    <link rel="modulepreload" crossorigin href="./assets/once-DNBWPkeJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/capabilities-CHeZxy51.js">
+    <link rel="modulepreload" crossorigin href="./assets/createReducer-C1MhlItJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/paths-D5zczhUD.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-CeF1Em5L.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-Di6rD-vJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-DanVWUek.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-BVNaV53g.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-BrqkjqDe.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-5bwTcyKs.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-BPoMypmC.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-Bm9PT5P9.js">
+    <link rel="modulepreload" crossorigin href="./assets/dist-BbqPy6oS.js">
+    <link rel="modulepreload" crossorigin href="./assets/stex-BGrE-q7N.js">
+    <link rel="modulepreload" crossorigin href="./assets/toDate-QOk09NqD.js">
+    <link rel="modulepreload" crossorigin href="./assets/purify.es-Bwm8T4QC.js">
+    <link rel="modulepreload" crossorigin href="./assets/cjs-DCKmcMBz.js">
+    <link rel="modulepreload" crossorigin href="./assets/isSymbol-BT6B8Bon.js">
+    <link rel="modulepreload" crossorigin href="./assets/now-CsYTPAhW.js">
+    <link rel="modulepreload" crossorigin href="./assets/debounce-DhnxH9Rh.js">
+    <link rel="modulepreload" crossorigin href="./assets/database-zap-n8PGHE18.js">
+    <link rel="modulepreload" crossorigin href="./assets/cells-DTFqEQb0.js">
+    <link rel="modulepreload" crossorigin href="./assets/kbd-PEowR7op.js">
+    <link rel="modulepreload" crossorigin href="./assets/useInstallPackage-D58nBaNf.js">
+    <link rel="modulepreload" crossorigin href="./assets/alert-dialog-D_kB5FIu.js">
+    <link rel="modulepreload" crossorigin href="./assets/dialog-WU4x2UpK.js">
+    <link rel="modulepreload" crossorigin href="./assets/useDebounce-BlgD22u_.js">
+    <link rel="modulepreload" crossorigin href="./assets/numbers-DtSpUdpO.js">
+    <link rel="modulepreload" crossorigin href="./assets/SSRProvider-CouFQxI2.js">
+    <link rel="modulepreload" crossorigin href="./assets/context-BJMN4ll3.js">
+    <link rel="modulepreload" crossorigin href="./assets/useNumberFormatter-xxZlcf11.js">
+    <link rel="modulepreload" crossorigin href="./assets/usePress-Bl6X9B5M.js">
+    <link rel="modulepreload" crossorigin href="./assets/input-BN98e517.js">
+    <link rel="modulepreload" crossorigin href="./assets/ImperativeModal-Dxj31V4A.js">
+    <link rel="modulepreload" crossorigin href="./assets/cell-link-D26WjdN1.js">
+    <link rel="modulepreload" crossorigin href="./assets/config-DjP9S1hr.js">
+    <link rel="modulepreload" crossorigin href="./assets/alert-CHWQT4zh.js">
+    <link rel="modulepreload" crossorigin href="./assets/chevron-right-C9ZBG6Lx.js">
+    <link rel="modulepreload" crossorigin href="./assets/dropdown-menu-DWGvf_Bw.js">
+    <link rel="modulepreload" crossorigin href="./assets/links-BeU4kHTI.js">
+    <link rel="modulepreload" crossorigin href="./assets/useRunCells-BpZ_0Xuz.js">
+    <link rel="modulepreload" crossorigin href="./assets/copy-HCSOwOwk.js">
+    <link rel="modulepreload" crossorigin href="./assets/copy-DlR5UiIE.js">
+    <link rel="modulepreload" crossorigin href="./assets/copy-icon-Cn8LzPNx.js">
+    <link rel="modulepreload" crossorigin href="./assets/RenderHTML-X9kskQZ0.js">
+    <link rel="modulepreload" crossorigin href="./assets/datasource-DZgUyqAK.js">
+    <link rel="modulepreload" crossorigin href="./assets/state-ByxLiTvP.js">
+    <link rel="modulepreload" crossorigin href="./assets/hat-glasses-xLTnAC_n.js">
+    <link rel="modulepreload" crossorigin href="./assets/package-ROei-DG7.js">
+    <link rel="modulepreload" crossorigin href="./assets/sparkles-DwqcWrJl.js">
+    <link rel="modulepreload" crossorigin href="./assets/MarimoErrorOutput-BVdFtnJz.js">
+    <link rel="modulepreload" crossorigin href="./assets/ErrorBoundary-B392qglD.js">
+    <link rel="modulepreload" crossorigin href="./assets/eye-off-DfXRjba3.js">
+    <link rel="modulepreload" crossorigin href="./assets/refresh-cw-DPUCy0Ep.js">
+    <link rel="modulepreload" crossorigin href="./assets/tree-actions-DUAdNn1i.js">
+    <link rel="modulepreload" crossorigin href="./assets/spinner-Cj3eM5bt.js">
+    <link rel="modulepreload" crossorigin href="./assets/html-to-image-BsXiWo0v.js">
+    <link rel="modulepreload" crossorigin href="./assets/focus-BTlyH5K_.js">
+    <link rel="modulepreload" crossorigin href="./assets/useAsyncData-BcvSvTUt.js">
+    <link rel="modulepreload" crossorigin href="./assets/LazyAnyLanguageCodeMirror-DUvRReKp.js">
+    <link rel="modulepreload" crossorigin href="./assets/micromark-factory-space-D4wN6pqE.js">
+    <link rel="modulepreload" crossorigin href="./assets/chunk-5FQGJX7Z-B4N_BMo6.js">
+    <link rel="modulepreload" crossorigin href="./assets/markdown-renderer-BjuEVUOa.js">
+    <link rel="modulepreload" crossorigin href="./assets/command-D5LtSvbN.js">
+    <link rel="modulepreload" crossorigin href="./assets/field-BPfggvql.js">
+    <link rel="modulepreload" crossorigin href="./assets/popover-B96fOqfH.js">
+    <link rel="modulepreload" crossorigin href="./assets/errors-D93OkQw8.js">
+    <link rel="modulepreload" crossorigin href="./assets/download-_oAlkvj6.js">
+    <link rel="modulepreload" crossorigin href="./assets/table-xPvP31p3.js">
+    <link rel="modulepreload" crossorigin href="./assets/useIframeCapabilities-DBacdN1t.js">
+    <link rel="modulepreload" crossorigin href="./assets/error-banner-d0-XOKtd.js">
+    <link rel="modulepreload" crossorigin href="./assets/formats-CydJsDOc.js">
+    <link rel="modulepreload" crossorigin href="./assets/utils-Y4n-X10o.js">
+    <link rel="modulepreload" crossorigin href="./assets/en-US-orJ4dPbF.js">
+    <link rel="modulepreload" crossorigin href="./assets/isValid-BmtlFqSa.js">
+    <link rel="modulepreload" crossorigin href="./assets/dates-CZTDC2tF.js">
+    <link rel="modulepreload" crossorigin href="./assets/extends-BiFDv3jB.js">
+    <link rel="modulepreload" crossorigin href="./assets/emotion-is-prop-valid.esm-C59xfSYt.js">
+    <link rel="modulepreload" crossorigin href="./assets/useDateFormatter-Cxnn3tJh.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-icons.esm-CsgEZOQ_.js">
+    <link rel="modulepreload" crossorigin href="./assets/RSPContexts-oeZyXDWd.js">
+    <link rel="modulepreload" crossorigin href="./assets/table-FVnUU4--.js">
+    <link rel="modulepreload" crossorigin href="./assets/ellipsis-CUbXmdb-.js">
+    <link rel="modulepreload" crossorigin href="./assets/external-link-C8y9rFms.js">
+    <link rel="modulepreload" crossorigin href="./assets/message-circle-DJwyqZtq.js">
+    <link rel="modulepreload" crossorigin href="./assets/plus-r1QITpsJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/trash-2-BLxp8uxj.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-resizable-panels.browser.esm-CLaR27oP.js">
+    <link rel="modulepreload" crossorigin href="./assets/JsonOutput-DnrBQBRT.js">
+    <link rel="modulepreload" crossorigin href="./assets/chart-no-axes-column-eb23KpAk.js">
+    <link rel="modulepreload" crossorigin href="./assets/square-function-ypIvDL4C.js">
+    <link rel="modulepreload" crossorigin href="./assets/spec-NeCHOv2Z.js">
+    <link rel="modulepreload" crossorigin href="./assets/column-preview-BLap3eAk.js">
+    <link rel="modulepreload" crossorigin href="./assets/icons-BwSNDWAP.js">
+    <link rel="modulepreload" crossorigin href="./assets/radio-group-5KDs5aO1.js">
+    <link rel="modulepreload" crossorigin href="./assets/floating-outline-Vqr5D17R.js">
+    <link rel="modulepreload" crossorigin href="./assets/switch-CDT2KH2g.js">
+    <link rel="modulepreload" crossorigin href="./assets/objectWithoutPropertiesLoose-DfWeGRFv.js">
+    <link rel="modulepreload" crossorigin href="./assets/esm-RBKN8Dn2.js">
+    <link rel="modulepreload" crossorigin href="./assets/readonly-python-code-BV8otm7e.js">
+    <link rel="modulepreload" crossorigin href="./assets/file-headphone-BjKz3ZV1.js">
+    <link rel="modulepreload" crossorigin href="./assets/file-BjlLTeSV.js">
+    <link rel="modulepreload" crossorigin href="./assets/image-Dvcyi0uu.js">
+    <link rel="modulepreload" crossorigin href="./assets/file-icons-V3puz20c.js">
+    <link rel="modulepreload" crossorigin href="./assets/events-CPoJAfgx.js">
+    <link rel="modulepreload" crossorigin href="./assets/share-c5Zh8BM8.js">
+    <link rel="modulepreload" crossorigin href="./assets/blob-BKW9TqBu.js">
+    <link rel="modulepreload" crossorigin href="./assets/get-DuxuLRGI.js">
+    <link rel="modulepreload" crossorigin href="./assets/_baseSet-DehVzRp6.js">
+    <link rel="modulepreload" crossorigin href="./assets/state-Ci7n55A9.js">
+    <link rel="modulepreload" crossorigin href="./assets/label-BOFHwHn7.js">
+    <link rel="modulepreload" crossorigin href="./assets/form-Bb1JVuzT.js">
+    <link rel="modulepreload" crossorigin href="./assets/textarea-Bn1AMfsk.js">
+    <link rel="modulepreload" crossorigin href="./assets/refresh-ccw-neWzNbg7.js">
+    <link rel="modulepreload" crossorigin href="./assets/form-CRSnWxLR.js">
+    <link rel="modulepreload" crossorigin href="./assets/renderShortcut-C6HKXhBl.js">
+    <link rel="modulepreload" crossorigin href="./assets/useBoolean-CgN_4RAl.js">
+    <link rel="modulepreload" crossorigin href="./assets/markdown-export-D-ZHIs71.js">
+    <link rel="modulepreload" crossorigin href="./assets/useDeepCompareMemoize-CbFVGT0j.js">
+    <link rel="modulepreload" crossorigin href="./assets/types-D0D7HkQV.js">
+    <link rel="modulepreload" crossorigin href="./assets/semaphore-X3ApuO41.js">
+    <link rel="modulepreload" crossorigin href="./assets/fileToBase64-CBP8Y0AP.js">
+    <link rel="modulepreload" crossorigin href="./assets/pathUtils-BCwK34YQ.js">
+    <link rel="modulepreload" crossorigin href="./assets/prop-types-BH1URye0.js">
+    <link rel="modulepreload" crossorigin href="./assets/es-dmMPFhRH.js">
+    <link rel="modulepreload" crossorigin href="./assets/_hasPath-D0QK37mF.js">
+    <link rel="modulepreload" crossorigin href="./assets/hasIn-DrYqVooW.js">
+    <link rel="modulepreload" crossorigin href="./assets/pick-Q2hMHnmn.js">
+    <link rel="modulepreload" crossorigin href="./assets/code-xml-COekUbUT.js">
+    <link rel="modulepreload" crossorigin href="./assets/globe-C2tUp3NL.js">
+    <link rel="modulepreload" crossorigin href="./assets/square-DVd8Y612.js">
+    <link rel="modulepreload" crossorigin href="./assets/triangle-alert-DGiOSARf.js">
+    <link rel="modulepreload" crossorigin href="./assets/bundle.esm-DTvm8QXy.js">
+    <link rel="stylesheet" crossorigin href="./assets/cells-BE1kpmPF.css">
+    <link rel="stylesheet" crossorigin href="./assets/markdown-renderer-DdDKmWlR.css">
+    <link rel="stylesheet" crossorigin href="./assets/JsonOutput-BQtz7-np.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-WoaGtlKd.css">
+  <marimo-wasm hidden=""></marimo-wasm>
+    <script>
+        if (window.location.protocol === 'file:') {
+            alert('Warning: This file must be served by an HTTP server to function correctly.');
+        }
+    </script>
+    
+    <style>
+        #save-button {
+            display: none !important;
+        }
+        #filename-input {
+            display: none !important;
+        }
+    </style>
+    
+<script data-marimo="true">
+    Object.defineProperty(window, "__MARIMO_EXPORT_CONTEXT__", {
+        value: Object.freeze({
+            trusted: true,
+            notebookCode: "# /// script\n# requires-python = \"\u003E=3.11\"\n# dependencies = [\n#     \"marimo\u003E=0.24.0\",\n#     \"matplotlib\",\n#     \"numpy\",\n#     \"pandas\",\n#     \"scipy\",\n# ]\n# ///\n\nimport marimo\n\n__generated_with = \"0.24.0\"\napp = marimo.App()\n\n\n@app.cell\ndef _():\n    import marimo as mo\n\n    return (mo,)\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    # Reconstructing $d'$ and criterion from open trial data\n\n    This notebook starts with the deposited CSV files from Hanning, Fern\u00e1ndez \u0026 Carrasco (2023). It asks two questions:\n\n    1. Can we reconstruct the published sensitivity measure, $d'$?\n    2. What does the same response table show about criterion, $c$?\n\n    The paper plotted $d'$. It did **not** report criterion. The right-hand column below is therefore a new descriptive analysis, not a reproduction of a paper figure.\n    \"\"\")\n    return\n\n\n@app.cell\ndef _():\n    from pathlib import Path\n\n    import matplotlib.pyplot as plt\n    import numpy as np\n    import pandas as pd\n    from scipy.stats import norm\n\n    return Path, norm, np, pd, plt\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 1. Read and decode the CSV files\n\n    The repository contains 26 participant files: 10 from Experiment 1, 9 from Experiment 2a, and 7 from Experiment 2b. Each file has 13 numeric columns and no header or deposited codebook.\n\n    The stimulus and response columns can nevertheless be identified: selecting the orientation at the tested location and comparing it with the response reproduces the recorded correct/incorrect value on every trial. Cue validity and whether the tested location was stimulated follow from the same internal relationships.\n    \"\"\")\n    return\n\n\n@app.cell\ndef _(Path, np, pd):\n    DATA_DIRECTORY = Path(__file__).parent / \"osfstorage\" / \"Data\"\n\n    RAW_COLUMNS = [\n        \"block\",\n        \"trial_in_block\",\n        \"design_code\",\n        \"analysis_code\",\n        \"cue_location_code\",\n        \"left_orientation_code\",\n        \"right_orientation_code\",\n        \"test_location_code\",\n        \"stimulated_hemifield_code\",\n        \"response_code\",\n        \"correct\",\n        \"saccade_latency_ms\",\n        \"landing_position_deg\",\n    ]\n\n    _frames = []\n    for _path in sorted(DATA_DIRECTORY.glob(\"*/*_resMat.csv\")):\n        _frame = pd.read_csv(_path, header=None, names=RAW_COLUMNS)\n        _frame[\"experiment\"] = _path.parent.name\n        _frame[\"participant\"] = _path.name.split(\"_\")[0]\n        _frames.append(_frame)\n\n    trials = pd.concat(_frames, ignore_index=True)\n    trials[\"test_stimulation\"] = np.where(\n        trials[\"test_location_code\"].eq(trials[\"stimulated_hemifield_code\"]),\n        \"Stimulated\",\n        \"Not stimulated\",\n    )\n    trials[\"validity\"] = np.select(\n        [\n            trials[\"cue_location_code\"].eq(0),\n            trials[\"cue_location_code\"].eq(trials[\"test_location_code\"]),\n        ],\n        [\"Neutral\", \"Valid\"],\n        default=\"Invalid\",\n    )\n    trials[\"stimulus_code\"] = np.where(\n        trials[\"test_location_code\"].eq(1),\n        trials[\"left_orientation_code\"],\n        trials[\"right_orientation_code\"],\n    ).astype(int)\n    trials[\"correct\"] = trials[\"correct\"].astype(bool)\n    trials[\"contrast_pct\"] = np.where(\n        trials[\"experiment\"].eq(\"Exp1\"),\n        trials[\"analysis_code\"].map({1: 2, 2: 7, 3: 13, 4: 24, 5: 46, 6: 85}),\n        np.nan,\n    )\n    trials[\"time_before_saccade_ms\"] = np.where(\n        trials[\"experiment\"].ne(\"Exp1\"),\n        trials[\"analysis_code\"].map({1: 175, 2: 125, 3: 75, 4: 25}),\n        np.nan,\n    )\n\n    assert len(_frames) == 26\n    assert len(trials) == 32_525\n    assert trials[\"stimulus_code\"].eq(trials[\"response_code\"]).equals(\n        trials[\"correct\"]\n    )\n    return (trials,)\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 2. Reconstruct the analysis cells\n\n    The paper used\n\n    \\[\n    d'=\\Phi^{-1}(H)-\\Phi^{-1}(F).\n    \\]\n\n    The same hit rate, $H$, and false-alarm rate, $F$, also give\n\n    \\[\n    c=-\\frac{1}{2}\\left[\\Phi^{-1}(H)+\\Phi^{-1}(F)\\right].\n    \\]\n\n    Rates equal to 0 or 1 are replaced by .01 or .99, following the paper. Metrics are calculated within each participant and experimental cell before taking group means.\n\n    The deposited CSVs do not say whether `-1` or `+1` means counter-clockwise. Here `-1` is called the signal. Reversing that choice leaves $d'$ unchanged and reverses the sign of $c$.\n    \"\"\")\n    return\n\n\n@app.cell\ndef _(norm, np, pd, trials):\n    # The final Experiment 1 exclusions cannot be recovered from the CSVs.\n    # Keeping neutral trials and saccade trials below 350 ms gives the closest\n    # group-level match to the deposited Figure 2 source values.\n    _exp1_saccade = trials[\"experiment\"].eq(\"Exp1\") \u0026 trials[\"validity\"].ne(\n        \"Neutral\"\n    )\n    analysis_trials = trials.loc[\n        ~_exp1_saccade | trials[\"saccade_latency_ms\"].lt(350)\n    ].copy()\n\n    _experiment_axes = {\n        \"Exp1\": \"contrast_pct\",\n        \"Exp2a\": \"time_before_saccade_ms\",\n        \"Exp2b\": \"time_before_saccade_ms\",\n    }\n    _rows = []\n    for _experiment, _x_column in _experiment_axes.items():\n        _experiment_trials = analysis_trials.loc[\n            analysis_trials[\"experiment\"].eq(_experiment)\n        ]\n        _group_columns = [\n            \"participant\",\n            _x_column,\n            \"validity\",\n            \"test_stimulation\",\n        ]\n        for _keys, _cell in _experiment_trials.groupby(\n            _group_columns, observed=True, dropna=False\n        ):\n            _participant, _x_value, _validity, _stimulation = _keys\n            _signal = _cell.loc[_cell[\"stimulus_code\"].eq(-1)]\n            _noise = _cell.loc[_cell[\"stimulus_code\"].eq(1)]\n            _hit_rate = _signal[\"response_code\"].eq(-1).mean()\n            _false_alarm_rate = _noise[\"response_code\"].eq(-1).mean()\n            _hit_rate = 0.01 if _hit_rate == 0 else 0.99 if _hit_rate == 1 else _hit_rate\n            _false_alarm_rate = (\n                0.01\n                if _false_alarm_rate == 0\n                else 0.99\n                if _false_alarm_rate == 1\n                else _false_alarm_rate\n            )\n            _z_hit = norm.ppf(_hit_rate)\n            _z_false_alarm = norm.ppf(_false_alarm_rate)\n            _rows.append(\n                {\n                    \"experiment\": _experiment,\n                    \"participant\": _participant,\n                    \"x_value\": _x_value,\n                    \"validity\": _validity,\n                    \"test_stimulation\": _stimulation,\n                    \"dprime\": _z_hit - _z_false_alarm,\n                    \"criterion\": -0.5 * (_z_hit + _z_false_alarm),\n                    \"n_trials\": len(_cell),\n                }\n            )\n\n    cell_metrics = pd.DataFrame(_rows)\n    assert len(analysis_trials) == 31_420\n    assert len(cell_metrics) == 616\n    assert np.isfinite(cell_metrics[[\"dprime\", \"criterion\"]]).all().all()\n    return (cell_metrics,)\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 3. Sensitivity and criterion\n    \"\"\")\n    return\n\n\n@app.cell\ndef _(cell_metrics, np, plt):\n    _colors = {\"Valid\": \"#655ba4\", \"Neutral\": \"#777a83\", \"Invalid\": \"#3c9878\"}\n    _experiments = [\n        (\"Exp1\", \"Experiment 1 \u00b7 V1/V2\", \"Contrast (%)\"),\n        (\"Exp2a\", \"Experiment 2a \u00b7 V1/V2\", \"Time before saccade onset (ms)\"),\n        (\"Exp2b\", \"Experiment 2b \u00b7 rFEF+\", \"Time before saccade onset (ms)\"),\n    ]\n    _conditions = [\n        (\"Valid\", \"Stimulated\"),\n        (\"Valid\", \"Not stimulated\"),\n        (\"Neutral\", \"Stimulated\"),\n        (\"Neutral\", \"Not stimulated\"),\n        (\"Invalid\", \"Stimulated\"),\n        (\"Invalid\", \"Not stimulated\"),\n    ]\n\n    reconstruction_figure, _axes = plt.subplots(3, 2, figsize=(13, 12))\n    for _row_index, (_experiment, _title, _x_label) in enumerate(_experiments):\n        _experiment_metrics = cell_metrics.loc[\n            cell_metrics[\"experiment\"].eq(_experiment)\n        ]\n        for _column_index, (_metric, _metric_label) in enumerate(\n            [(\"dprime\", \"$d'$\"), (\"criterion\", \"Criterion $c$\")]\n        ):\n            _axis = _axes[_row_index, _column_index]\n            for _validity, _stimulation in _conditions:\n                _values = _experiment_metrics.loc[\n                    _experiment_metrics[\"validity\"].eq(_validity)\n                    \u0026 _experiment_metrics[\"test_stimulation\"].eq(_stimulation)\n                ]\n                if _values.empty:\n                    continue\n                _summary = (\n                    _values.groupby(\"x_value\", observed=True)[_metric]\n                    .agg([\"mean\", \"std\", \"count\"])\n                    .reset_index()\n                    .sort_values(\"x_value\")\n                )\n                _summary[\"sem\"] = _summary[\"std\"] / np.sqrt(_summary[\"count\"])\n                _axis.errorbar(\n                    _summary[\"x_value\"],\n                    _summary[\"mean\"],\n                    yerr=_summary[\"sem\"],\n                    color=_colors[_validity],\n                    linestyle=\"-\" if _stimulation == \"Stimulated\" else \"--\",\n                    marker=\"o\",\n                    markerfacecolor=(\n                        _colors[_validity]\n                        if _stimulation == \"Stimulated\"\n                        else \"white\"\n                    ),\n                    capsize=3,\n                    label=f\"{_validity} \u00b7 {_stimulation}\",\n                )\n            if _metric == \"criterion\":\n                _axis.axhline(0, color=\"black\", linewidth=1, linestyle=\":\")\n            if _experiment == \"Exp1\":\n                _axis.set_xscale(\"log\")\n                _axis.set_xticks([2, 7, 13, 24, 46, 85])\n                _axis.set_xticklabels([2, 7, 13, 24, 46, 85])\n            else:\n                _axis.set_xticks([175, 125, 75, 25])\n                _axis.set_xlim(190, 10)\n            _axis.set_title(f\"{_title} \u00b7 {_metric_label}\")\n            _axis.set_xlabel(_x_label)\n            _axis.set_ylabel(_metric_label)\n            _axis.grid(alpha=0.25)\n\n    _handles, _labels = _axes[0, 0].get_legend_handles_labels()\n    reconstruction_figure.legend(\n        _handles,\n        _labels,\n        loc=\"upper center\",\n        bbox_to_anchor=(0.5, 0.96),\n        ncol=3,\n        frameon=False,\n    )\n    reconstruction_figure.suptitle(\n        \"Figure 1. Participant-first reconstruction from deposited CSV trials\",\n        y=0.995,\n    )\n    reconstruction_figure.tight_layout(rect=[0, 0, 1, 0.89])\n    plt.show()\n    return\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    **How to read Figure 1.** The left column shows sensory separation. Higher $d'$ means that the two orientations produced more distinguishable response distributions. The right column shows response preference. The dotted line is $c=0$. Under the chosen `-1 = signal` convention, positive $c$ means fewer `-1` responses and negative $c$ means more. A nonzero criterion is response bias, not poorer vision.\n\n    Filled circles are trials at the stimulated test location. Open circles are trials at the non-stimulated location. Error bars are standard errors across participant-level values. The criterion patterns are descriptive: they were not reported or tested in the paper.\n    \"\"\")\n    return\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 4. Why reconstruction was necessary\n\n    The deposit contains trial CSVs, processed Excel/MATLAB figure values, and plotting code. It does not contain the code that transformed the trial files into the processed figure values, and it does not contain a CSV data dictionary.\n\n    Experiment 1 also lacks the blink flags, fixation traces, target coordinates, and target-relative landing errors needed to repeat every exclusion in the Methods. Its CSVs contain 24,035 rows; the paper reports 22,679 analyzed trials. The transparent rule used above\u2014retain neutral trials and saccade trials below 350 ms\u2014leaves 22,930 rows and gives the closest group-level $d'$ match among the defensible rules we could test.\n\n    This is a common open-data situation. Data may be available while the codebook, intermediate table, or exact preprocessing chain is not. \u201cOpen\u201d makes checking possible; it does not guarantee that every transformation is recoverable.\n    \"\"\")\n    return\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 5. One participant does not align perfectly\n\n    Nine of the ten Experiment 1 CSV participants closely match a processed source row after allowing for an apparent row reordering. `S07` remains a poor source-row match. This does **not** make `S07` a behavioral outlier: its mean cell-level $d'=1.334$ and $c=0.035$ are both within the ordinary range of the other participants.\n\n    The mismatch could reflect missing offline exclusions, changed participant ordering, or different raw and processed export versions. The available files cannot decide among these explanations. `S07` is therefore retained rather than silently excluded.\n\n    This too is common in open-data analysis: a mismatch is evidence to document, not permission to remove a participant until the cause is known.\n    \"\"\")\n    return\n\n\n@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r\"\"\"\n    ## 6. What reproduced\u2014and what is new\n\n    | Analysis path | Result |\n    |---|---|\n    | Deposited processed source data \u2192 Figures 2, 3, S1, and S2 | All supplied plotted numerical results reproduced. The supplied Figure 3 MATLAB script mislabels the time direction; the paper's axis is correct. |\n    | Experiment 2a and 2b CSV trials \u2192 published $d'$ cells | Reproduced exactly. |\n    | Experiment 1 CSV trials \u2192 Figure 2 $d'$ cells | Close at group level; nine participants closely reconcile and one does not. |\n    | CSV trials \u2192 criterion $c$ | New analysis. Criterion was not shown in the paper and is absent from its figure-source matrices. |\n\n    Reproducing a figure from processed source values and reconstructing it from trials are different achievements. The former checks the published plot. The latter checks the missing path from observations to analysis-ready values.\n\n    ---\n\n    \u00a9 2026 Suresh Krishna. This educational notebook is licensed under\n    [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).\n    [Source and attribution details](https://github.com/m2b3/QuantBehavior/blob/main/LICENSE-CONTENT.md).\n    \"\"\")\n    return\n\n\nif __name__ == \"__main__\":\n    app.run()\n",
+        }),
+        writable: false,
+        configurable: false,
+    });
+</script>
+<marimo-code hidden="">%23%20%2F%2F%2F%20script%0A%23%20requires-python%20%3D%20%22%3E%3D3.11%22%0A%23%20dependencies%20%3D%20%5B%0A%23%20%20%20%20%20%22marimo%3E%3D0.24.0%22%2C%0A%23%20%20%20%20%20%22matplotlib%22%2C%0A%23%20%20%20%20%20%22numpy%22%2C%0A%23%20%20%20%20%20%22pandas%22%2C%0A%23%20%20%20%20%20%22scipy%22%2C%0A%23%20%5D%0A%23%20%2F%2F%2F%0A%0Aimport%20marimo%0A%0A__generated_with%20%3D%20%220.24.0%22%0Aapp%20%3D%20marimo.App()%0A%0A%0A%40app.cell%0Adef%20_()%3A%0A%20%20%20%20import%20marimo%20as%20mo%0A%0A%20%20%20%20return%20(mo%2C)%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%20Reconstructing%20%24d'%24%20and%20criterion%20from%20open%20trial%20data%0A%0A%20%20%20%20This%20notebook%20starts%20with%20the%20deposited%20CSV%20files%20from%20Hanning%2C%20Fern%C3%A1ndez%20%26%20Carrasco%20(2023).%20It%20asks%20two%20questions%3A%0A%0A%20%20%20%201.%20Can%20we%20reconstruct%20the%20published%20sensitivity%20measure%2C%20%24d'%24%3F%0A%20%20%20%202.%20What%20does%20the%20same%20response%20table%20show%20about%20criterion%2C%20%24c%24%3F%0A%0A%20%20%20%20The%20paper%20plotted%20%24d'%24.%20It%20did%20**not**%20report%20criterion.%20The%20right-hand%20column%20below%20is%20therefore%20a%20new%20descriptive%20analysis%2C%20not%20a%20reproduction%20of%20a%20paper%20figure.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell%0Adef%20_()%3A%0A%20%20%20%20from%20pathlib%20import%20Path%0A%0A%20%20%20%20import%20matplotlib.pyplot%20as%20plt%0A%20%20%20%20import%20numpy%20as%20np%0A%20%20%20%20import%20pandas%20as%20pd%0A%20%20%20%20from%20scipy.stats%20import%20norm%0A%0A%20%20%20%20return%20Path%2C%20norm%2C%20np%2C%20pd%2C%20plt%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%201.%20Read%20and%20decode%20the%20CSV%20files%0A%0A%20%20%20%20The%20repository%20contains%2026%20participant%20files%3A%2010%20from%20Experiment%201%2C%209%20from%20Experiment%202a%2C%20and%207%20from%20Experiment%202b.%20Each%20file%20has%2013%20numeric%20columns%20and%20no%20header%20or%20deposited%20codebook.%0A%0A%20%20%20%20The%20stimulus%20and%20response%20columns%20can%20nevertheless%20be%20identified%3A%20selecting%20the%20orientation%20at%20the%20tested%20location%20and%20comparing%20it%20with%20the%20response%20reproduces%20the%20recorded%20correct%2Fincorrect%20value%20on%20every%20trial.%20Cue%20validity%20and%20whether%20the%20tested%20location%20was%20stimulated%20follow%20from%20the%20same%20internal%20relationships.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell%0Adef%20_(Path%2C%20np%2C%20pd)%3A%0A%20%20%20%20DATA_DIRECTORY%20%3D%20Path(__file__).parent%20%2F%20%22osfstorage%22%20%2F%20%22Data%22%0A%0A%20%20%20%20RAW_COLUMNS%20%3D%20%5B%0A%20%20%20%20%20%20%20%20%22block%22%2C%0A%20%20%20%20%20%20%20%20%22trial_in_block%22%2C%0A%20%20%20%20%20%20%20%20%22design_code%22%2C%0A%20%20%20%20%20%20%20%20%22analysis_code%22%2C%0A%20%20%20%20%20%20%20%20%22cue_location_code%22%2C%0A%20%20%20%20%20%20%20%20%22left_orientation_code%22%2C%0A%20%20%20%20%20%20%20%20%22right_orientation_code%22%2C%0A%20%20%20%20%20%20%20%20%22test_location_code%22%2C%0A%20%20%20%20%20%20%20%20%22stimulated_hemifield_code%22%2C%0A%20%20%20%20%20%20%20%20%22response_code%22%2C%0A%20%20%20%20%20%20%20%20%22correct%22%2C%0A%20%20%20%20%20%20%20%20%22saccade_latency_ms%22%2C%0A%20%20%20%20%20%20%20%20%22landing_position_deg%22%2C%0A%20%20%20%20%5D%0A%0A%20%20%20%20_frames%20%3D%20%5B%5D%0A%20%20%20%20for%20_path%20in%20sorted(DATA_DIRECTORY.glob(%22*%2F*_resMat.csv%22))%3A%0A%20%20%20%20%20%20%20%20_frame%20%3D%20pd.read_csv(_path%2C%20header%3DNone%2C%20names%3DRAW_COLUMNS)%0A%20%20%20%20%20%20%20%20_frame%5B%22experiment%22%5D%20%3D%20_path.parent.name%0A%20%20%20%20%20%20%20%20_frame%5B%22participant%22%5D%20%3D%20_path.name.split(%22_%22)%5B0%5D%0A%20%20%20%20%20%20%20%20_frames.append(_frame)%0A%0A%20%20%20%20trials%20%3D%20pd.concat(_frames%2C%20ignore_index%3DTrue)%0A%20%20%20%20trials%5B%22test_stimulation%22%5D%20%3D%20np.where(%0A%20%20%20%20%20%20%20%20trials%5B%22test_location_code%22%5D.eq(trials%5B%22stimulated_hemifield_code%22%5D)%2C%0A%20%20%20%20%20%20%20%20%22Stimulated%22%2C%0A%20%20%20%20%20%20%20%20%22Not%20stimulated%22%2C%0A%20%20%20%20)%0A%20%20%20%20trials%5B%22validity%22%5D%20%3D%20np.select(%0A%20%20%20%20%20%20%20%20%5B%0A%20%20%20%20%20%20%20%20%20%20%20%20trials%5B%22cue_location_code%22%5D.eq(0)%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20trials%5B%22cue_location_code%22%5D.eq(trials%5B%22test_location_code%22%5D)%2C%0A%20%20%20%20%20%20%20%20%5D%2C%0A%20%20%20%20%20%20%20%20%5B%22Neutral%22%2C%20%22Valid%22%5D%2C%0A%20%20%20%20%20%20%20%20default%3D%22Invalid%22%2C%0A%20%20%20%20)%0A%20%20%20%20trials%5B%22stimulus_code%22%5D%20%3D%20np.where(%0A%20%20%20%20%20%20%20%20trials%5B%22test_location_code%22%5D.eq(1)%2C%0A%20%20%20%20%20%20%20%20trials%5B%22left_orientation_code%22%5D%2C%0A%20%20%20%20%20%20%20%20trials%5B%22right_orientation_code%22%5D%2C%0A%20%20%20%20).astype(int)%0A%20%20%20%20trials%5B%22correct%22%5D%20%3D%20trials%5B%22correct%22%5D.astype(bool)%0A%20%20%20%20trials%5B%22contrast_pct%22%5D%20%3D%20np.where(%0A%20%20%20%20%20%20%20%20trials%5B%22experiment%22%5D.eq(%22Exp1%22)%2C%0A%20%20%20%20%20%20%20%20trials%5B%22analysis_code%22%5D.map(%7B1%3A%202%2C%202%3A%207%2C%203%3A%2013%2C%204%3A%2024%2C%205%3A%2046%2C%206%3A%2085%7D)%2C%0A%20%20%20%20%20%20%20%20np.nan%2C%0A%20%20%20%20)%0A%20%20%20%20trials%5B%22time_before_saccade_ms%22%5D%20%3D%20np.where(%0A%20%20%20%20%20%20%20%20trials%5B%22experiment%22%5D.ne(%22Exp1%22)%2C%0A%20%20%20%20%20%20%20%20trials%5B%22analysis_code%22%5D.map(%7B1%3A%20175%2C%202%3A%20125%2C%203%3A%2075%2C%204%3A%2025%7D)%2C%0A%20%20%20%20%20%20%20%20np.nan%2C%0A%20%20%20%20)%0A%0A%20%20%20%20assert%20len(_frames)%20%3D%3D%2026%0A%20%20%20%20assert%20len(trials)%20%3D%3D%2032_525%0A%20%20%20%20assert%20trials%5B%22stimulus_code%22%5D.eq(trials%5B%22response_code%22%5D).equals(%0A%20%20%20%20%20%20%20%20trials%5B%22correct%22%5D%0A%20%20%20%20)%0A%20%20%20%20return%20(trials%2C)%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%202.%20Reconstruct%20the%20analysis%20cells%0A%0A%20%20%20%20The%20paper%20used%0A%0A%20%20%20%20%5C%5B%0A%20%20%20%20d'%3D%5CPhi%5E%7B-1%7D(H)-%5CPhi%5E%7B-1%7D(F).%0A%20%20%20%20%5C%5D%0A%0A%20%20%20%20The%20same%20hit%20rate%2C%20%24H%24%2C%20and%20false-alarm%20rate%2C%20%24F%24%2C%20also%20give%0A%0A%20%20%20%20%5C%5B%0A%20%20%20%20c%3D-%5Cfrac%7B1%7D%7B2%7D%5Cleft%5B%5CPhi%5E%7B-1%7D(H)%2B%5CPhi%5E%7B-1%7D(F)%5Cright%5D.%0A%20%20%20%20%5C%5D%0A%0A%20%20%20%20Rates%20equal%20to%200%20or%201%20are%20replaced%20by%20.01%20or%20.99%2C%20following%20the%20paper.%20Metrics%20are%20calculated%20within%20each%20participant%20and%20experimental%20cell%20before%20taking%20group%20means.%0A%0A%20%20%20%20The%20deposited%20CSVs%20do%20not%20say%20whether%20%60-1%60%20or%20%60%2B1%60%20means%20counter-clockwise.%20Here%20%60-1%60%20is%20called%20the%20signal.%20Reversing%20that%20choice%20leaves%20%24d'%24%20unchanged%20and%20reverses%20the%20sign%20of%20%24c%24.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell%0Adef%20_(norm%2C%20np%2C%20pd%2C%20trials)%3A%0A%20%20%20%20%23%20The%20final%20Experiment%201%20exclusions%20cannot%20be%20recovered%20from%20the%20CSVs.%0A%20%20%20%20%23%20Keeping%20neutral%20trials%20and%20saccade%20trials%20below%20350%20ms%20gives%20the%20closest%0A%20%20%20%20%23%20group-level%20match%20to%20the%20deposited%20Figure%202%20source%20values.%0A%20%20%20%20_exp1_saccade%20%3D%20trials%5B%22experiment%22%5D.eq(%22Exp1%22)%20%26%20trials%5B%22validity%22%5D.ne(%0A%20%20%20%20%20%20%20%20%22Neutral%22%0A%20%20%20%20)%0A%20%20%20%20analysis_trials%20%3D%20trials.loc%5B%0A%20%20%20%20%20%20%20%20~_exp1_saccade%20%7C%20trials%5B%22saccade_latency_ms%22%5D.lt(350)%0A%20%20%20%20%5D.copy()%0A%0A%20%20%20%20_experiment_axes%20%3D%20%7B%0A%20%20%20%20%20%20%20%20%22Exp1%22%3A%20%22contrast_pct%22%2C%0A%20%20%20%20%20%20%20%20%22Exp2a%22%3A%20%22time_before_saccade_ms%22%2C%0A%20%20%20%20%20%20%20%20%22Exp2b%22%3A%20%22time_before_saccade_ms%22%2C%0A%20%20%20%20%7D%0A%20%20%20%20_rows%20%3D%20%5B%5D%0A%20%20%20%20for%20_experiment%2C%20_x_column%20in%20_experiment_axes.items()%3A%0A%20%20%20%20%20%20%20%20_experiment_trials%20%3D%20analysis_trials.loc%5B%0A%20%20%20%20%20%20%20%20%20%20%20%20analysis_trials%5B%22experiment%22%5D.eq(_experiment)%0A%20%20%20%20%20%20%20%20%5D%0A%20%20%20%20%20%20%20%20_group_columns%20%3D%20%5B%0A%20%20%20%20%20%20%20%20%20%20%20%20%22participant%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20_x_column%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%22validity%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%22test_stimulation%22%2C%0A%20%20%20%20%20%20%20%20%5D%0A%20%20%20%20%20%20%20%20for%20_keys%2C%20_cell%20in%20_experiment_trials.groupby(%0A%20%20%20%20%20%20%20%20%20%20%20%20_group_columns%2C%20observed%3DTrue%2C%20dropna%3DFalse%0A%20%20%20%20%20%20%20%20)%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20_participant%2C%20_x_value%2C%20_validity%2C%20_stimulation%20%3D%20_keys%0A%20%20%20%20%20%20%20%20%20%20%20%20_signal%20%3D%20_cell.loc%5B_cell%5B%22stimulus_code%22%5D.eq(-1)%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20_noise%20%3D%20_cell.loc%5B_cell%5B%22stimulus_code%22%5D.eq(1)%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20_hit_rate%20%3D%20_signal%5B%22response_code%22%5D.eq(-1).mean()%0A%20%20%20%20%20%20%20%20%20%20%20%20_false_alarm_rate%20%3D%20_noise%5B%22response_code%22%5D.eq(-1).mean()%0A%20%20%20%20%20%20%20%20%20%20%20%20_hit_rate%20%3D%200.01%20if%20_hit_rate%20%3D%3D%200%20else%200.99%20if%20_hit_rate%20%3D%3D%201%20else%20_hit_rate%0A%20%20%20%20%20%20%20%20%20%20%20%20_false_alarm_rate%20%3D%20(%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%200.01%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20_false_alarm_rate%20%3D%3D%200%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20else%200.99%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20_false_alarm_rate%20%3D%3D%201%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20else%20_false_alarm_rate%0A%20%20%20%20%20%20%20%20%20%20%20%20)%0A%20%20%20%20%20%20%20%20%20%20%20%20_z_hit%20%3D%20norm.ppf(_hit_rate)%0A%20%20%20%20%20%20%20%20%20%20%20%20_z_false_alarm%20%3D%20norm.ppf(_false_alarm_rate)%0A%20%20%20%20%20%20%20%20%20%20%20%20_rows.append(%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22experiment%22%3A%20_experiment%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22participant%22%3A%20_participant%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22x_value%22%3A%20_x_value%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22validity%22%3A%20_validity%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22test_stimulation%22%3A%20_stimulation%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22dprime%22%3A%20_z_hit%20-%20_z_false_alarm%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22criterion%22%3A%20-0.5%20*%20(_z_hit%20%2B%20_z_false_alarm)%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%22n_trials%22%3A%20len(_cell)%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20)%0A%0A%20%20%20%20cell_metrics%20%3D%20pd.DataFrame(_rows)%0A%20%20%20%20assert%20len(analysis_trials)%20%3D%3D%2031_420%0A%20%20%20%20assert%20len(cell_metrics)%20%3D%3D%20616%0A%20%20%20%20assert%20np.isfinite(cell_metrics%5B%5B%22dprime%22%2C%20%22criterion%22%5D%5D).all().all()%0A%20%20%20%20return%20(cell_metrics%2C)%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%203.%20Sensitivity%20and%20criterion%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell%0Adef%20_(cell_metrics%2C%20np%2C%20plt)%3A%0A%20%20%20%20_colors%20%3D%20%7B%22Valid%22%3A%20%22%23655ba4%22%2C%20%22Neutral%22%3A%20%22%23777a83%22%2C%20%22Invalid%22%3A%20%22%233c9878%22%7D%0A%20%20%20%20_experiments%20%3D%20%5B%0A%20%20%20%20%20%20%20%20(%22Exp1%22%2C%20%22Experiment%201%20%C2%B7%20V1%2FV2%22%2C%20%22Contrast%20(%25)%22)%2C%0A%20%20%20%20%20%20%20%20(%22Exp2a%22%2C%20%22Experiment%202a%20%C2%B7%20V1%2FV2%22%2C%20%22Time%20before%20saccade%20onset%20(ms)%22)%2C%0A%20%20%20%20%20%20%20%20(%22Exp2b%22%2C%20%22Experiment%202b%20%C2%B7%20rFEF%2B%22%2C%20%22Time%20before%20saccade%20onset%20(ms)%22)%2C%0A%20%20%20%20%5D%0A%20%20%20%20_conditions%20%3D%20%5B%0A%20%20%20%20%20%20%20%20(%22Valid%22%2C%20%22Stimulated%22)%2C%0A%20%20%20%20%20%20%20%20(%22Valid%22%2C%20%22Not%20stimulated%22)%2C%0A%20%20%20%20%20%20%20%20(%22Neutral%22%2C%20%22Stimulated%22)%2C%0A%20%20%20%20%20%20%20%20(%22Neutral%22%2C%20%22Not%20stimulated%22)%2C%0A%20%20%20%20%20%20%20%20(%22Invalid%22%2C%20%22Stimulated%22)%2C%0A%20%20%20%20%20%20%20%20(%22Invalid%22%2C%20%22Not%20stimulated%22)%2C%0A%20%20%20%20%5D%0A%0A%20%20%20%20reconstruction_figure%2C%20_axes%20%3D%20plt.subplots(3%2C%202%2C%20figsize%3D(13%2C%2012))%0A%20%20%20%20for%20_row_index%2C%20(_experiment%2C%20_title%2C%20_x_label)%20in%20enumerate(_experiments)%3A%0A%20%20%20%20%20%20%20%20_experiment_metrics%20%3D%20cell_metrics.loc%5B%0A%20%20%20%20%20%20%20%20%20%20%20%20cell_metrics%5B%22experiment%22%5D.eq(_experiment)%0A%20%20%20%20%20%20%20%20%5D%0A%20%20%20%20%20%20%20%20for%20_column_index%2C%20(_metric%2C%20_metric_label)%20in%20enumerate(%0A%20%20%20%20%20%20%20%20%20%20%20%20%5B(%22dprime%22%2C%20%22%24d'%24%22)%2C%20(%22criterion%22%2C%20%22Criterion%20%24c%24%22)%5D%0A%20%20%20%20%20%20%20%20)%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20_axis%20%3D%20_axes%5B_row_index%2C%20_column_index%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20for%20_validity%2C%20_stimulation%20in%20_conditions%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_values%20%3D%20_experiment_metrics.loc%5B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_experiment_metrics%5B%22validity%22%5D.eq(_validity)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%26%20_experiment_metrics%5B%22test_stimulation%22%5D.eq(_stimulation)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20_values.empty%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20continue%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_summary%20%3D%20(%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_values.groupby(%22x_value%22%2C%20observed%3DTrue)%5B_metric%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.agg(%5B%22mean%22%2C%20%22std%22%2C%20%22count%22%5D)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.reset_index()%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20.sort_values(%22x_value%22)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_summary%5B%22sem%22%5D%20%3D%20_summary%5B%22std%22%5D%20%2F%20np.sqrt(_summary%5B%22count%22%5D)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.errorbar(%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_summary%5B%22x_value%22%5D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_summary%5B%22mean%22%5D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20yerr%3D_summary%5B%22sem%22%5D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3D_colors%5B_validity%5D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20linestyle%3D%22-%22%20if%20_stimulation%20%3D%3D%20%22Stimulated%22%20else%20%22--%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20marker%3D%22o%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20markerfacecolor%3D(%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_colors%5B_validity%5D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20_stimulation%20%3D%3D%20%22Stimulated%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20else%20%22white%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20)%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20capsize%3D3%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20label%3Df%22%7B_validity%7D%20%C2%B7%20%7B_stimulation%7D%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20)%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20_metric%20%3D%3D%20%22criterion%22%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.axhline(0%2C%20color%3D%22black%22%2C%20linewidth%3D1%2C%20linestyle%3D%22%3A%22)%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20_experiment%20%3D%3D%20%22Exp1%22%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xscale(%22log%22)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xticks(%5B2%2C%207%2C%2013%2C%2024%2C%2046%2C%2085%5D)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xticklabels(%5B2%2C%207%2C%2013%2C%2024%2C%2046%2C%2085%5D)%0A%20%20%20%20%20%20%20%20%20%20%20%20else%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xticks(%5B175%2C%20125%2C%2075%2C%2025%5D)%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xlim(190%2C%2010)%0A%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_title(f%22%7B_title%7D%20%C2%B7%20%7B_metric_label%7D%22)%0A%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_xlabel(_x_label)%0A%20%20%20%20%20%20%20%20%20%20%20%20_axis.set_ylabel(_metric_label)%0A%20%20%20%20%20%20%20%20%20%20%20%20_axis.grid(alpha%3D0.25)%0A%0A%20%20%20%20_handles%2C%20_labels%20%3D%20_axes%5B0%2C%200%5D.get_legend_handles_labels()%0A%20%20%20%20reconstruction_figure.legend(%0A%20%20%20%20%20%20%20%20_handles%2C%0A%20%20%20%20%20%20%20%20_labels%2C%0A%20%20%20%20%20%20%20%20loc%3D%22upper%20center%22%2C%0A%20%20%20%20%20%20%20%20bbox_to_anchor%3D(0.5%2C%200.96)%2C%0A%20%20%20%20%20%20%20%20ncol%3D3%2C%0A%20%20%20%20%20%20%20%20frameon%3DFalse%2C%0A%20%20%20%20)%0A%20%20%20%20reconstruction_figure.suptitle(%0A%20%20%20%20%20%20%20%20%22Figure%201.%20Participant-first%20reconstruction%20from%20deposited%20CSV%20trials%22%2C%0A%20%20%20%20%20%20%20%20y%3D0.995%2C%0A%20%20%20%20)%0A%20%20%20%20reconstruction_figure.tight_layout(rect%3D%5B0%2C%200%2C%201%2C%200.89%5D)%0A%20%20%20%20plt.show()%0A%20%20%20%20return%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20**How%20to%20read%20Figure%201.**%20The%20left%20column%20shows%20sensory%20separation.%20Higher%20%24d'%24%20means%20that%20the%20two%20orientations%20produced%20more%20distinguishable%20response%20distributions.%20The%20right%20column%20shows%20response%20preference.%20The%20dotted%20line%20is%20%24c%3D0%24.%20Under%20the%20chosen%20%60-1%20%3D%20signal%60%20convention%2C%20positive%20%24c%24%20means%20fewer%20%60-1%60%20responses%20and%20negative%20%24c%24%20means%20more.%20A%20nonzero%20criterion%20is%20response%20bias%2C%20not%20poorer%20vision.%0A%0A%20%20%20%20Filled%20circles%20are%20trials%20at%20the%20stimulated%20test%20location.%20Open%20circles%20are%20trials%20at%20the%20non-stimulated%20location.%20Error%20bars%20are%20standard%20errors%20across%20participant-level%20values.%20The%20criterion%20patterns%20are%20descriptive%3A%20they%20were%20not%20reported%20or%20tested%20in%20the%20paper.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%204.%20Why%20reconstruction%20was%20necessary%0A%0A%20%20%20%20The%20deposit%20contains%20trial%20CSVs%2C%20processed%20Excel%2FMATLAB%20figure%20values%2C%20and%20plotting%20code.%20It%20does%20not%20contain%20the%20code%20that%20transformed%20the%20trial%20files%20into%20the%20processed%20figure%20values%2C%20and%20it%20does%20not%20contain%20a%20CSV%20data%20dictionary.%0A%0A%20%20%20%20Experiment%201%20also%20lacks%20the%20blink%20flags%2C%20fixation%20traces%2C%20target%20coordinates%2C%20and%20target-relative%20landing%20errors%20needed%20to%20repeat%20every%20exclusion%20in%20the%20Methods.%20Its%20CSVs%20contain%2024%2C035%20rows%3B%20the%20paper%20reports%2022%2C679%20analyzed%20trials.%20The%20transparent%20rule%20used%20above%E2%80%94retain%20neutral%20trials%20and%20saccade%20trials%20below%20350%20ms%E2%80%94leaves%2022%2C930%20rows%20and%20gives%20the%20closest%20group-level%20%24d'%24%20match%20among%20the%20defensible%20rules%20we%20could%20test.%0A%0A%20%20%20%20This%20is%20a%20common%20open-data%20situation.%20Data%20may%20be%20available%20while%20the%20codebook%2C%20intermediate%20table%2C%20or%20exact%20preprocessing%20chain%20is%20not.%20%E2%80%9COpen%E2%80%9D%20makes%20checking%20possible%3B%20it%20does%20not%20guarantee%20that%20every%20transformation%20is%20recoverable.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%205.%20One%20participant%20does%20not%20align%20perfectly%0A%0A%20%20%20%20Nine%20of%20the%20ten%20Experiment%201%20CSV%20participants%20closely%20match%20a%20processed%20source%20row%20after%20allowing%20for%20an%20apparent%20row%20reordering.%20%60S07%60%20remains%20a%20poor%20source-row%20match.%20This%20does%20**not**%20make%20%60S07%60%20a%20behavioral%20outlier%3A%20its%20mean%20cell-level%20%24d'%3D1.334%24%20and%20%24c%3D0.035%24%20are%20both%20within%20the%20ordinary%20range%20of%20the%20other%20participants.%0A%0A%20%20%20%20The%20mismatch%20could%20reflect%20missing%20offline%20exclusions%2C%20changed%20participant%20ordering%2C%20or%20different%20raw%20and%20processed%20export%20versions.%20The%20available%20files%20cannot%20decide%20among%20these%20explanations.%20%60S07%60%20is%20therefore%20retained%20rather%20than%20silently%20excluded.%0A%0A%20%20%20%20This%20too%20is%20common%20in%20open-data%20analysis%3A%20a%20mismatch%20is%20evidence%20to%20document%2C%20not%20permission%20to%20remove%20a%20participant%20until%20the%20cause%20is%20known.%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0A%40app.cell(hide_code%3DTrue)%0Adef%20_(mo)%3A%0A%20%20%20%20mo.md(r%22%22%22%0A%20%20%20%20%23%23%206.%20What%20reproduced%E2%80%94and%20what%20is%20new%0A%0A%20%20%20%20%7C%20Analysis%20path%20%7C%20Result%20%7C%0A%20%20%20%20%7C---%7C---%7C%0A%20%20%20%20%7C%20Deposited%20processed%20source%20data%20%E2%86%92%20Figures%202%2C%203%2C%20S1%2C%20and%20S2%20%7C%20All%20supplied%20plotted%20numerical%20results%20reproduced.%20The%20supplied%20Figure%203%20MATLAB%20script%20mislabels%20the%20time%20direction%3B%20the%20paper's%20axis%20is%20correct.%20%7C%0A%20%20%20%20%7C%20Experiment%202a%20and%202b%20CSV%20trials%20%E2%86%92%20published%20%24d'%24%20cells%20%7C%20Reproduced%20exactly.%20%7C%0A%20%20%20%20%7C%20Experiment%201%20CSV%20trials%20%E2%86%92%20Figure%202%20%24d'%24%20cells%20%7C%20Close%20at%20group%20level%3B%20nine%20participants%20closely%20reconcile%20and%20one%20does%20not.%20%7C%0A%20%20%20%20%7C%20CSV%20trials%20%E2%86%92%20criterion%20%24c%24%20%7C%20New%20analysis.%20Criterion%20was%20not%20shown%20in%20the%20paper%20and%20is%20absent%20from%20its%20figure-source%20matrices.%20%7C%0A%0A%20%20%20%20Reproducing%20a%20figure%20from%20processed%20source%20values%20and%20reconstructing%20it%20from%20trials%20are%20different%20achievements.%20The%20former%20checks%20the%20published%20plot.%20The%20latter%20checks%20the%20missing%20path%20from%20observations%20to%20analysis-ready%20values.%0A%0A%20%20%20%20---%0A%0A%20%20%20%20%C2%A9%202026%20Suresh%20Krishna.%20This%20educational%20notebook%20is%20licensed%20under%0A%20%20%20%20%5BCC%20BY-NC-SA%204.0%5D(https%3A%2F%2Fcreativecommons.org%2Flicenses%2Fby-nc-sa%2F4.0%2F).%0A%20%20%20%20%5BSource%20and%20attribution%20details%5D(https%3A%2F%2Fgithub.com%2Fm2b3%2FQuantBehavior%2Fblob%2Fmain%2FLICENSE-CONTENT.md).%0A%20%20%20%20%22%22%22)%0A%20%20%20%20return%0A%0A%0Aif%20__name__%20%3D%3D%20%22__main__%22%3A%0A%20%20%20%20app.run()%0A</marimo-code></head>
+  <body>
+    <div id="root"></div>
+    <script data-marimo="true">
+      Object.defineProperty(window, "__MARIMO_MOUNT_CONFIG__", {
+        value: Object.freeze({
+            "filename": "notebook.py",
+            "cwd": "",
+            "lspWorkspace": null,
+            "mode": "edit",
+            "version": "0.24.0",
+            "serverToken": "unused",
+            "config": {"ai": {"custom_providers": {}, "enabled": true, "models": {"custom_models": [], "displayed_models": []}}, "completion": {"activate_on_typing": true, "auto_close_pairs": true, "copilot": false, "signature_hint_on_typing": false}, "diagnostics": {"sql_linter": true}, "display": {"cell_output": "below", "code_editor_font_size": 14, "code_lens": true, "dataframes": "rich", "default_table_max_columns": 50, "default_table_page_size": 10, "default_width": "medium", "reference_highlighting": true, "theme": "light"}, "formatting": {"line_length": 79}, "keymap": {"overrides": {}, "preset": "default"}, "language_servers": {"pylsp": {"enable_flake8": false, "enable_mypy": true, "enable_pydocstyle": false, "enable_pyflakes": false, "enable_pylint": false, "enable_ruff": true, "enabled": false}}, "mcp": {"mcpServers": {}, "presets": []}, "package_management": {"manager": "uv"}, "runtime": {"auto_instantiate": false, "auto_reload": "off", "default_csv_encoding": "utf-8", "default_sql_output": "auto", "on_cell_change": "autorun", "output_max_bytes": 8000000, "reactive_tests": true, "show_tracebacks": false, "std_stream_max_bytes": 1000000, "watcher_on_save": "lazy"}, "save": {"autosave": "off", "autosave_delay": 1000, "format_on_save": false}, "server": {"browser": "default", "follow_symlink": false}, "snippets": {"custom_paths": [], "include_default_snippets": true}},
+            "configOverrides": {},
+            "appConfig": {"sql_output": "auto", "width": "compact"},
+            "view": {"showAppCode": false},
+            "notebook": null,
+            "session": null,
+            "runtimeConfig": null,
+        }),
+        writable: false,
+        configurable: false,
+      });
+    </script>
+  </body>
+</html>
