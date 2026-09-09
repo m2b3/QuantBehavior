@@ -20,9 +20,9 @@ this avoids a SciPy/Pyodide decompression failure when the viewer runs as WASM.
 
 ## What the viewer contains
 
-- **Signal detection:** recomputes d-prime, criterion, accuracy, hit rate, false-alarm rate, and latency summaries from the subject CSVs. Controls cover experiment, trial-inclusion profile, plotted dimension, condition splits, participants, extreme-rate correction, signal-code convention, minimum cell size, uncertainty, and participant overlays.
+- **Signal detection:** recomputes d-prime, criterion, accuracy, hit rate, false-alarm rate, and latency summaries from the subject CSVs. Criterion is shown as a dedicated companion plot (with a zero-bias reference) instead of being discoverable only through the metric dropdown. Controls cover experiment, trial-inclusion profile, plotted dimension, condition splits, participants, extreme-rate correction, signal-code convention, minimum cell size, uncertainty, and participant overlays.
 - **Publication explorer:** interactive versions of Figures 2, 3, S1, and S2 built from the supplied MATLAB source matrices. Figure 3 uses the scientifically correct 175-to-25 ms-before-saccade axis.
-- **Original plots:** a gallery of the six already-generated PNG files in `results/`.
+- **Original plots:** a gallery of the six already-generated PNG files in `results/`, embedded directly so it also renders when the viewer output is nested or exported.
 - **Methods & data map:** documents the inferred raw-column meanings and every important analysis choice.
 
 ## Signal-detection definitions

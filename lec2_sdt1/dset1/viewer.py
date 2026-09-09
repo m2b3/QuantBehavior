@@ -21,6 +21,7 @@ app = marimo.App(
 
 @app.cell
 def _():
+    from base64 import b64encode
     from html import escape
 
     import marimo as mo
@@ -67,6 +68,15 @@ def _():
             f'<div class="stat-label">{escape(label)}</div>'
             f'<div class="stat-note">{escape(note)}</div>'
             "</div>"
+        )
+
+    def embedded_png(path, alt: str):
+        """Embed a PNG without relying on a short-lived local-file URL."""
+        encoded = b64encode(path.read_bytes()).decode("ascii")
+        return mo.Html(
+            '<img src="data:image/png;base64,'
+            + encoded
+            + f'" alt="{escape(alt, quote=True)}">'
         )
 
     def prepare_sdt(
@@ -159,6 +169,7 @@ def _():
         box,
         control,
         display_summary,
+        embedded_png,
         escape,
         mo,
         pd,
@@ -473,6 +484,14 @@ def _(
         sdt_error.value,
         sdt_show_subjects.value,
     )
+    criterion_figure = sdt_figure(
+        sdt_metrics,
+        "criterion",
+        sdt_x.value,
+        sdt_splits.value,
+        sdt_error.value,
+        sdt_show_subjects.value,
+    )
     _plot = mo.ui.plotly(
         _figure,
         config={
@@ -481,6 +500,17 @@ def _(
             "toImageButtonOptions": {
                 "format": "svg",
                 "filename": "signal_detection",
+            },
+        },
+    )
+    _criterion_plot = mo.ui.plotly(
+        criterion_figure,
+        config={
+            "displaylogo": False,
+            "responsive": True,
+            "toImageButtonOptions": {
+                "format": "svg",
+                "filename": "response_criterion",
             },
         },
     )
@@ -570,9 +600,38 @@ def _(
         _download,
         class_name="table-heading",
     )
+    _metric_plot = box(
+        mo.Html(
+            f"<h3>{METRIC_LABELS.get(sdt_metric.value, sdt_metric.value)}</h3>"
+        ),
+        _plot,
+        class_name="metric-plot",
+    )
+    _criterion_companion = (
+        box(
+            mo.Html(
+                "<h3>Criterion analysis</h3>"
+                "<p>Response bias from the same participant-first cells; "
+                "the dotted line marks c = 0.</p>"
+            ),
+            _criterion_plot,
+            class_name="metric-plot criterion-plot",
+        )
+        if sdt_metric.value != "criterion"
+        else None
+    )
+    _metric_plots = box(
+        _metric_plot,
+        _criterion_companion,
+        class_name=(
+            "metric-plots paired"
+            if _criterion_companion is not None
+            else "metric-plots"
+        ),
+    )
     _analysis = box(
         _kpis,
-        _plot,
+        _metric_plots,
         _table_heading,
         _table,
         class_name="analysis-panel card",
@@ -599,7 +658,7 @@ def _(
         _method,
         class_name="tab-page",
     )
-    return (sdt_page,)
+    return criterion_figure, sdt_page
 
 
 @app.cell
@@ -688,7 +747,7 @@ def _(
 
 
 @app.cell
-def _(ROOT, box, mo):
+def _(ROOT, box, embedded_png, mo):
     _gallery_items = [
         (
             "Figure 2a",
@@ -719,11 +778,7 @@ def _(ROOT, box, mo):
     ]
     _gallery_cards = [
         box(
-            mo.image(
-                ROOT / "results" / filename,
-                alt=f"Generated {title}",
-                width="100%",
-            ),
+            embedded_png(ROOT / "results" / filename, f"Generated {title}"),
             mo.Html(
                 f"<figcaption><strong>{title}</strong><span>{caption}</span></figcaption>"
             ),

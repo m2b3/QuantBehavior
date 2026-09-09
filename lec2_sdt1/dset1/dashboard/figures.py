@@ -186,6 +186,14 @@ def sdt_figure(
         fig.update_xaxes(autorange="reversed", tickvals=[175, 125, 75, 25])
     if metric in {"accuracy", "hit_rate", "false_alarm_rate"}:
         fig.update_yaxes(range=[0, 1.03], tickformat=".0%")
+    if metric == "criterion":
+        fig.add_hline(
+            y=0,
+            line_dash="dot",
+            line_color="#8a93a6",
+            annotation_text="No response bias",
+            annotation_position="bottom right",
+        )
     return base_layout(fig)
 
 
