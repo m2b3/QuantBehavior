@@ -1,15 +1,17 @@
 # Presaccadic attention data viewer
 
-This repository now includes a local Dash companion for the deposited trial data, processed figure-source matrices, and six verified MATLAB plot exports from Hanning, Fernández & Carrasco (2023).
+This repository includes a local Marimo companion for the deposited trial data, processed figure-source matrices, and six verified MATLAB plot exports from Hanning, Fernández & Carrasco (2023).
 
 ## Run
 
 ```powershell
 python -m pip install -r requirements.txt
-python app.py
+marimo run viewer.py
 ```
 
-Open <http://127.0.0.1:8050>.
+Open the local URL printed by Marimo (normally <http://127.0.0.1:2718>).
+
+To inspect or modify the reactive notebook, run `marimo edit viewer.py` instead.
 
 ## What the viewer contains
 
