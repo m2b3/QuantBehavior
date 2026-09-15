@@ -4,8 +4,10 @@ Educational materials and computational examples for quantitative approaches
 to behavior.
 
 - [Open the statistical-evidence notebook in MoLab](https://molab.marimo.io/github/m2b3/QuantBehavior/blob/main/lec1_stats/statistical_pitfalls.py)
-- [Open the signal detection theory notebook in MoLab](https://molab.marimo.io/github/m2b3/QuantBehavior/blob/main/sdt.py)
-- [Run the notebook as a WebAssembly app](https://molab.marimo.io/github/m2b3/QuantBehavior/blob/main/sdt.py/wasm)
+- [Open the signal detection theory notebook in MoLab](https://molab.marimo.io/github/m2b3/QuantBehavior/blob/main/lec2_sdt1/sdt.py)
+- [Run the signal detection theory notebook as a WebAssembly app](https://m2b3.github.io/QuantBehavior/lec2_sdt1/)
+- [Open the Gaussian SDT tutorial in MoLab](https://molab.marimo.io/github/m2b3/QuantBehavior/blob/main/lec2_sdt1/sdt_gaussian_tutorial.py)
+- [Run the Gaussian SDT tutorial as a WebAssembly app](https://m2b3.github.io/QuantBehavior/lec2_sdt1/sdt_gaussian_tutorial/)
 
 ## Educational content license
 
