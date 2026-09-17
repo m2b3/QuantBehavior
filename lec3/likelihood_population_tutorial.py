@@ -40,7 +40,7 @@ def _():
 
     def relative_likelihood(log_values):
         shifted = np.asarray(log_values) - np.max(log_values)
-        return np.exp(np.clip(shifted, -40.0, 0.0))
+        return np.exp(shifted)
 
     def clean_axes(axes, grid=True):
         for axis in np.atleast_1d(axes).flat:
@@ -176,31 +176,43 @@ def _(mo):
 def _(mo):
     mo.md(r"""
     <div class="likelihood-hero">
-      <h1>From spikes to likelihood</h1>
-      <p>A visual tutorial about a beautifully simple possibility: a sensory population can describe not just one guessed stimulus, but how well every possible stimulus explains the spikes that actually occurred. We build the idea without a spike-count distribution, introduce Poisson noise only when it becomes useful, and finish with the assumptions and correlations that determine when the shortcut works.</p>
+      <h1>Likelihood and population decoding</h1>
+      <p>How a model of neural responses defines a likelihood function, how population responses can represent that function, and which assumptions justify a weighted readout. Interactive figures distinguish response probability, relative likelihood, posterior probability, and decision variables.</p>
     </div>
 
     <div class="concept-chain">
-      <div class="concept-step"><strong>1 · Predict</strong><span>A tuning curve says what a neuron tends to do for each possible stimulus.</span></div>
-      <div class="concept-step"><strong>2 · Observe</strong><span>On one trial, the population emits a particular pattern of spikes.</span></div>
-      <div class="concept-step"><strong>3 · Ask backward</strong><span>Which possible stimuli make that observed pattern unsurprising?</span></div>
-      <div class="concept-step"><strong>4 · Pool</strong><span>Weighted sums of spikes can answer that question for every stimulus.</span></div>
+      <div class="concept-step"><strong>1 · Response model</strong><span>For each fixed stimulus, specify a distribution over possible responses.</span></div>
+      <div class="concept-step"><strong>2 · Observed data</strong><span>Fix the response vector measured on one trial.</span></div>
+      <div class="concept-step"><strong>3 · Likelihood</strong><span>Evaluate the probability of that same response under each candidate stimulus.</span></div>
+      <div class="concept-step"><strong>4 · Population readout</strong><span>Determine when these evaluations reduce to weighted sums of spike counts.</span></div>
     </div>
 
-    This is a conceptual companion to Jazayeri & Movshon (2006), not a
-    line-by-line reconstruction. Keep one distinction in view throughout:
+    This tutorial accompanies Jazayeri & Movshon (2006). All numerical examples
+    below are illustrative models; they do not reproduce recorded neural data.
 
-    > **Probability predicts data from a proposed world. Likelihood compares
-    > proposed worlds using data we have already observed.**
+    ## 1. Response probability, likelihood, and posterior probability
 
-    ## 1. Turn the question around
+    Let $r$ denote a neural response and $\theta$ a stimulus. A response model
+    specifies $P(r\mid\theta)$: for a **fixed stimulus**, it assigns probabilities
+    to the possible responses. Once a response $r_{\mathrm{obs}}$ has been
+    observed, the likelihood is $L(\theta)=P(r_{\mathrm{obs}}\mid\theta)$.
+    The same model is evaluated with the **response fixed and stimulus varied**.
+    The conditioning has not been reversed: likelihood is not
+    $P(\theta\mid r_{\mathrm{obs}})$.
 
-    Begin with one neuron and no distributional machinery. Suppose its trial
-    response has only three useful labels: **quiet**, **medium**, or **busy**.
-    The left panel is a forward model: each row asks what the neuron might do
-    if that row's direction were really present. Select the response that was
-    actually observed. The highlighted column, read vertically, becomes a
-    likelihood over the three candidate causes.
+    In the left panel, a neuron's response is grouped into low, medium, or high
+    spike-count categories within a fixed observation window. Each row is a
+    probability distribution over these mutually exclusive, exhaustive
+    categories, so it sums to one. Selecting an observed category highlights
+    one column. The middle panel plots its entries against candidate direction:
+    this is the likelihood function. The direction with the largest entry is
+    the maximum-likelihood estimate among these three candidates.
+
+    The right panel adds a prior over directions. Each likelihood value is
+    multiplied by its prior probability, then the three products are divided by
+    their sum. The result is a posterior distribution over directions. Change
+    the prior while keeping the response fixed: the likelihood stays unchanged,
+    but the posterior can change substantially.
     """)
     return
 
@@ -208,18 +220,24 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     observed_response = mo.ui.radio(
-        options=["quiet", "medium", "busy"],
-        value="busy",
+        options=["low count", "medium count", "high count"],
+        value="high count",
         inline=True,
-        label="The neuron was observed to be…",
+        label="Observed response category",
     )
-    return (observed_response,)
+    direction_prior = mo.ui.radio(
+        options=["equal probabilities", "leftward more frequent"],
+        value="equal probabilities",
+        inline=True,
+        label="Prior over directions",
+    )
+    return direction_prior, observed_response
 
 
 @app.cell(hide_code=True)
-def _(Rectangle, clean_axes, mo, np, observed_response, plt):
-    _responses = ["quiet", "medium", "busy"]
-    _worlds = ["leftward", "straight", "rightward"]
+def _(Rectangle, clean_axes, direction_prior, mo, np, observed_response, plt):
+    _responses = ["low count", "medium count", "high count"]
+    _worlds = ["leftward", "upward", "rightward"]
     _forward = np.array(
         [
             [0.70, 0.25, 0.05],
@@ -230,9 +248,16 @@ def _(Rectangle, clean_axes, mo, np, observed_response, plt):
     _chosen = _responses.index(observed_response.value)
     _likelihood = _forward[:, _chosen]
     _best = int(np.argmax(_likelihood))
+    _prior = (
+        np.ones(3) / 3
+        if direction_prior.value == "equal probabilities"
+        else np.array([0.85, 0.10, 0.05])
+    )
+    _posterior = _likelihood * _prior
+    _posterior /= _posterior.sum()
 
-    _fig, (_ax_table, _ax_like) = plt.subplots(
-        1, 2, figsize=(11.2, 4.1), gridspec_kw={"width_ratios": [1.35, 1]}
+    _fig, (_ax_table, _ax_like, _ax_post) = plt.subplots(
+        1, 3, figsize=(13.4, 4.2), gridspec_kw={"width_ratios": [1.4, 1, 1]}
     )
     _fig.patch.set_facecolor("white")
 
@@ -264,7 +289,7 @@ def _(Rectangle, clean_axes, mo, np, observed_response, plt):
     _ax_table.set_xticks(range(3), _responses)
     _ax_table.set_yticks(range(3), _worlds)
     _ax_table.set(
-        title="Forward probabilities: what response would each world produce?",
+        title="Response probabilities P(r | direction)",
         xlabel="possible neural response",
         ylabel="candidate direction",
     )
@@ -286,32 +311,44 @@ def _(Rectangle, clean_axes, mo, np, observed_response, plt):
             fontweight="bold" if _row == _best else "normal",
         )
     _ax_like.set(
-        title=f"Read the '{observed_response.value}' column as likelihood",
-        xlabel="support for each candidate world",
+        title="Likelihood for the observed category",
+        xlabel="P(observed category | direction)",
         xlim=(0, 0.8),
     )
     _ax_like.invert_yaxis()
-    clean_axes([_ax_like])
+    _positions = np.arange(3)
+    _ax_post.barh(_positions - 0.17, _prior, height=0.30, color="#bac4d2", label="prior")
+    _ax_post.barh(_positions + 0.17, _posterior, height=0.30, color="#16846b", label="posterior")
+    _ax_post.set_yticks(_positions, _worlds)
+    _ax_post.invert_yaxis()
+    _ax_post.set(title="Probabilities over directions", xlabel="probability", xlim=(0, 1))
+    _ax_post.legend(frameon=False, fontsize=8)
+    clean_axes([_ax_like, _ax_post])
     _fig.tight_layout(w_pad=2.4)
 
     mo.vstack(
         [
             observed_response,
+            direction_prior,
             _fig,
             mo.callout(
                 mo.md(
                     f"""
                     The observed response was **{observed_response.value}**.
-                    That event had probability **{_likelihood[0]:.2f}** in a
-                    leftward world, **{_likelihood[1]:.2f}** in a straight
-                    world, and **{_likelihood[2]:.2f}** in a rightward world.
-                    So **{_worlds[_best]}** is best supported by this neuron.
+                    Its probabilities under leftward, upward, and rightward
+                    motion are **{_likelihood[0]:.2f}**, **{_likelihood[1]:.2f}**,
+                    and **{_likelihood[2]:.2f}**, respectively. The
+                    maximum-likelihood direction is **{_worlds[_best]}**.
+                    The likelihood values sum to **{_likelihood.sum():.2f}**;
+                    no requirement makes this sum equal to one. In contrast,
+                    each set of prior or posterior bars sums to one.
 
-                    Rows are probability distributions and sum to one. The
-                    highlighted column is a likelihood function: it compares
-                    candidate causes and need not sum to one. Turning it into
-                    probabilities *of the causes* would additionally require
-                    prior probabilities and normalization.
+                    A likelihood ratio compares two entries in the middle
+                    panel. A ratio of 14 means that this response is 14 times
+                    as probable under one candidate as under the other. It
+                    does not mean the candidate itself is 14 times as probable
+                    unless the prior odds are one. Posterior odds combine
+                    the prior odds with this likelihood ratio.
                     """
                 ),
                 kind="info",
@@ -325,16 +362,41 @@ def _(Rectangle, clean_axes, mo, np, observed_response, plt):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 2. Independent clues multiply
+    **Continuous responses and plotting scales.** For a continuous measurement,
+    the response model supplies a probability *density*, rather than a
+    probability at a single exact value. Probabilities are areas over response
+    intervals. A density can exceed one and has units reciprocal to those of
+    the response. Its likelihood is still obtained by holding the observed
+    response fixed and varying the candidate stimulus.
 
-    Now imagine two independent sources of sensory evidence. Each produces a
-    broad likelihood curve rather than a single answer. Move where each clue
-    points and how precise both clues are. The lower panel keeps only places
-    that both clues support.
+    Multiplying every likelihood value by the same positive constant leaves
+    all likelihood ratios unchanged. In a **relative likelihood** plot we divide
+    by the maximum, giving a peak of one. This is a plotting convention, not
+    normalization into a probability distribution. The width shows how quickly
+    relative support falls away from the best-fitting stimulus; it is not by
+    itself a posterior standard deviation or a confidence interval.
 
-    Independence here is conditional: **once a candidate stimulus is fixed,
-    knowing clue 1 does not help predict clue 2**. That is the condition that
-    lets their support multiply.
+    ## 2. Combining conditionally independent measurements
+
+    Consider two measurements of the same scalar stimulus. Each has Gaussian
+    error centered on the true stimulus, with a known standard deviation. The
+    sliders specify the two observed measurements and their noise standard
+    deviations. For each candidate stimulus, the model evaluates the density
+    of each observed measurement. Their product is the joint likelihood if
+    the errors are **independent conditional on that stimulus**.
+
+    In the upper panel, both likelihoods are divided by their individual
+    maxima. Multiplying these relative curves gives the correct shape of the
+    joint likelihood. The lower panel divides that product by its own maximum
+    to make its width easy to compare. All these rescalings are constant across
+    candidate stimuli for the selected data and noise settings.
+
+    With equal noise, the joint maximum lies halfway between the measurements.
+    With unequal noise, it lies closer to the measurement with the smaller
+    standard deviation. A narrower input curve falls faster as a candidate
+    moves away from its measurement, so it contributes more to locating the
+    joint maximum. Both measurements refer to one common stimulus; combining
+    measurements of different stimuli would require a different model.
     """)
     return
 
@@ -349,7 +411,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Clue 1 points toward",
+        label="Observed measurement 1",
     )
     clue_two_center = mo.ui.slider(
         start=-80,
@@ -359,7 +421,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Clue 2 points toward",
+        label="Observed measurement 2",
     )
     clue_width = mo.ui.slider(
         start=12,
@@ -369,12 +431,17 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Uncertainty of each clue (width)",
+        label="Noise standard deviation: measurement 1",
+    )
+    clue_two_width = mo.ui.slider(
+        start=12, stop=60, step=4, value=32, debounce=True,
+        show_value=True, full_width=True,
+        label="Noise standard deviation: measurement 2",
     )
     clue_controls = mo.vstack(
-        [clue_one_center, clue_two_center, clue_width], gap=0.5
+        [clue_one_center, clue_two_center, clue_width, clue_two_width], gap=0.5
     )
-    return clue_controls, clue_one_center, clue_two_center, clue_width
+    return clue_controls, clue_one_center, clue_two_center, clue_two_width, clue_width
 
 
 @app.cell(hide_code=True)
@@ -383,30 +450,35 @@ def _(
     clue_controls,
     clue_one_center,
     clue_two_center,
+    clue_two_width,
     clue_width,
     mo,
     np,
     plt,
 ):
-    _x = np.linspace(-110, 110, 700)
+    _x = np.linspace(-110, 110, 881)
     _width = clue_width.value
-    _l1 = 0.96 * np.exp(-0.5 * ((_x - clue_one_center.value) / _width) ** 2)
-    _l2 = 0.96 * np.exp(-0.5 * ((_x - clue_two_center.value) / _width) ** 2)
+    _width_two = clue_two_width.value
+    _l1 = np.exp(-0.5 * ((_x - clue_one_center.value) / _width) ** 2)
+    _l2 = np.exp(-0.5 * ((_x - clue_two_center.value) / _width_two) ** 2)
     _joint = _l1 * _l2
-    _best_x = float(_x[np.argmax(_joint)])
-    _peak_support = float(np.max(_joint))
+    _joint /= _joint.max()
+    _joint_sd = 1.0 / np.sqrt(1.0 / _width**2 + 1.0 / _width_two**2)
+    _best_x = _joint_sd**2 * (
+        clue_one_center.value / _width**2 + clue_two_center.value / _width_two**2
+    )
 
     _fig, (_ax_parts, _ax_joint) = plt.subplots(
         2, 1, figsize=(10.8, 6.7), sharex=True
     )
     _fig.patch.set_facecolor("white")
-    _ax_parts.plot(_x, _l1, color="#2563a8", linewidth=2.5, label="clue 1")
+    _ax_parts.plot(_x, _l1, color="#2563a8", linewidth=2.5, label="measurement 1")
     _ax_parts.fill_between(_x, 0, _l1, color="#2563a8", alpha=0.12)
-    _ax_parts.plot(_x, _l2, color="#d97706", linewidth=2.5, label="clue 2")
+    _ax_parts.plot(_x, _l2, color="#d97706", linewidth=2.5, label="measurement 2")
     _ax_parts.fill_between(_x, 0, _l2, color="#d97706", alpha=0.12)
     _ax_parts.set(
-        title="Each clue supports a range of possible stimuli",
-        ylabel="likelihood",
+        title="Individual likelihoods, each scaled to peak at 1",
+        ylabel="relative likelihood",
         ylim=(0, 1.05),
     )
     _ax_parts.legend(frameon=False, ncols=2)
@@ -414,30 +486,24 @@ def _(
     _ax_joint.plot(_x, _joint, color="#7c3aed", linewidth=3.0)
     _ax_joint.fill_between(_x, 0, _joint, color="#7c3aed", alpha=0.20)
     _ax_joint.axvline(_best_x, color="#182338", linestyle="--", linewidth=1.4)
-    _ax_joint.scatter([_best_x], [_peak_support], color="#182338", s=55, zorder=4)
+    _ax_joint.scatter([_best_x], [1], color="#182338", s=55, zorder=4)
     _ax_joint.text(
         _best_x,
-        min(0.98, _peak_support + 0.09),
-        f"best joint explanation ≈ {_best_x:.0f}",
+        1.08,
+        f"maximum-likelihood estimate = {_best_x:.1f}",
         ha="center",
         fontsize=9.5,
     )
     _ax_joint.set(
-        title="Joint support: multiply at every candidate stimulus",
+        title="Joint likelihood: product rescaled to peak at 1",
         xlabel="candidate stimulus",
-        ylabel="likelihood product",
+        ylabel="relative likelihood",
         xlim=(-110, 110),
-        ylim=(0, 1.05),
+        ylim=(0, 1.22),
     )
     clean_axes([_ax_parts, _ax_joint])
     _fig.tight_layout(h_pad=2.0)
 
-    _agreement = abs(clue_one_center.value - clue_two_center.value)
-    _reading = (
-        "The clues overlap strongly, so their joint peak remains high."
-        if _agreement <= _width
-        else "The clues disagree relative to their uncertainty, so even their best compromise has weak absolute support."
-    )
     mo.vstack(
         [
             clue_controls,
@@ -445,18 +511,27 @@ def _(
             mo.callout(
                 mo.md(
                     f"""
-                    At each horizontal location, the blue height is multiplied
-                    by the orange height. The winner is near **{_best_x:.0f}**,
-                    but the height of the winning product is only
-                    **{_peak_support:.3f}**. {_reading}
+                    The joint maximum is **{_best_x:.1f}**. Its Gaussian width
+                    parameter is **{_joint_sd:.1f}**, compared with **{_width}**
+                    and **{_width_two}** for the individual measurements.
+                    With equal noise, combining two independent measurements
+                    reduces this width by a factor of approximately 1.41.
+                    Under a flat prior over the real line, these particular
+                    Gaussian likelihoods also give Gaussian posteriors with
+                    those standard deviations.
 
-                    This distinction matters: the *location* of the peak says
-                    which explanation is best; its *shape and scale* describe
-                    uncertainty and compatibility. A point estimate throws
-                    most of that information away.
+                    Move the measurements farther apart without changing the
+                    noise. The joint width stays the same: in this fixed-noise,
+                    common-stimulus model, disagreement changes the location
+                    and unscaled height of the product, not its curvature.
+                    A narrow relative likelihood therefore does not establish
+                    that the model fits the observations well. Assessing
+                    disagreement requires checking the measurement difference
+                    against its predicted noise, or comparing an explicit
+                    alternative model. The rescaled peak height cannot do this.
                     """
                 ),
-                kind="success",
+                kind="info",
             ),
         ],
         gap=0.7,
@@ -467,16 +542,29 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 3. Logs turn repeated multiplication into accumulation
+    ## 3. Log likelihood and repeated observations
 
-    Probabilities below one shrink rapidly when multiplied. That is awkward
-    numerically and awkward for a neural circuit. Logs change the bookkeeping:
-    every new clue contributes an amount that can simply be added. The best
-    explanation does not move, because the logarithm preserves ordering.
+    Taking logarithms turns a product of likelihood factors into a sum. Because
+    the logarithm is strictly increasing, the maximum stays at the same
+    stimulus. A difference between two log-likelihood values is the logarithm
+    of their likelihood ratio. This preserves relative evidence while avoiding
+    numerical underflow from multiplying many small numbers. It does not make
+    dependent observations independent.
 
-    Move the number of agreeing observations. The middle panel rapidly becomes
-    visually tiny; the right panel remains a clean accumulated evidence
-    landscape.
+    Here the response on each trial is binary. The left curve specifies the
+    probability of response 1 at each stimulus; the probability of response 0
+    is its complement. Suppose the stimulus is fixed across trials and every
+    observed response is 1. For independent trials, the likelihood is the
+    product of one copy of the left curve per observed trial. This is a model
+    for actual repeated observations, not permission to count one observation
+    more than once.
+
+    Increase the number of trials. The middle panel shows the probability of
+    the entire response sequence becoming smaller, even at its maximum.
+    Simultaneously, the differences between candidates in the right panel grow:
+    the data discriminate more strongly between stimuli. The absolute
+    probability of a longer data sequence and the precision of stimulus
+    estimation are different quantities.
     """)
     return
 
@@ -491,7 +579,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Number of independent, similarly shaped clues",
+        label="Number of independent trials, all with observed response 1",
     )
     return (repeated_clues,)
 
@@ -513,19 +601,19 @@ def _(clean_axes, mo, np, plt, repeated_clues):
     _axes[0].plot(_x, _single, color="#2563a8", linewidth=2.6)
     _axes[0].fill_between(_x, 0, _single, color="#2563a8", alpha=0.15)
     _axes[0].set(
-        title="One clue",
+        title="One observed response: r = 1",
         xlabel="candidate stimulus",
-        ylabel="likelihood",
+        ylabel="P(r = 1 | stimulus)",
         ylim=(0, 1.02),
     )
 
     _axes[1].plot(_x, _product, color="#d97706", linewidth=2.6)
     _axes[1].fill_between(_x, 0, _product, color="#d97706", alpha=0.18)
     _axes[1].set(
-        title=f"Multiply {_number} copies",
+        title=f"Joint likelihood of {_number} responses",
         xlabel="candidate stimulus",
         ylabel="product",
-        ylim=(0, max(0.06, _product_peak * 1.15)),
+        ylim=(0, 1.02),
     )
 
     _axes[2].plot(
@@ -538,7 +626,7 @@ def _(clean_axes, mo, np, plt, repeated_clues):
     )
     _axes[2].fill_between(_x, _log_sum, np.min(_log_sum), color="#7c3aed", alpha=0.10)
     _axes[2].set(
-        title="Add in log space",
+        title="Sum of individual log likelihoods",
         xlabel="candidate stimulus",
         ylabel="log likelihood",
     )
@@ -557,26 +645,33 @@ def _(clean_axes, mo, np, plt, repeated_clues):
                 f"""
                 <div class="metric-row">
                   <div class="metric"><strong>{_number}</strong><span>likelihood factors</span></div>
-                  <div class="metric"><strong>{_product_peak:.3g}</strong><span>product at the winner</span></div>
-                  <div class="metric"><strong>{_log_peak:.2f}</strong><span>sum of logs at the winner</span></div>
-                  <div class="metric"><strong>{_winner:.0f}</strong><span>same winner in every panel</span></div>
+                  <div class="metric"><strong>{_product_peak:.3g}</strong><span>maximum joint likelihood</span></div>
+                  <div class="metric"><strong>{_log_peak:.2f}</strong><span>maximum log likelihood</span></div>
+                  <div class="metric"><strong>{_winner:.0f}</strong><span>maximum-likelihood estimate</span></div>
                 </div>
                 """
             ),
             mo.callout(
                 mo.md(r"""
-                **Nothing inferential changed. Only the coordinate system did.**
-                A product of likelihood factors and a sum of their logarithms
-                rank every candidate in exactly the same order. This is the
-                bridge to accumulation: evidence from cells, cues, or moments
-                can arrive separately and be added to one running score.
+                The middle and right panels represent the same joint
+                likelihood on different vertical scales. A drop of 2 log units
+                from the maximum corresponds to a likelihood ratio of about
+                0.14 relative to the maximum; a drop of 5 corresponds to about
+                0.007. Larger vertical differences imply stronger relative
+                discrimination between those candidates.
+
+                An additive constant independent of stimulus can be removed
+                from a log likelihood without changing these differences.
+                Multiplying a log likelihood by a constant is different: it
+                changes likelihood ratios and the inferred precision, even
+                though it preserves the maximum when the constant is positive.
                 """),
                 kind="info",
             ),
             mo.accordion(
                 {
-                    "The entire log rule in one line": mo.md(
-                        r"""If independent evidence supplies factors
+                    "Log-likelihood identity": mo.md(
+                        r"""If conditionally independent observations supply factors
                         $L_1,L_2,\ldots$, then
                         $\log(L_1L_2\cdots)=\log L_1+\log L_2+\cdots$.
                         Multiplication becomes addition; the location of the
@@ -593,22 +688,34 @@ def _(clean_axes, mo, np, plt, repeated_clues):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 4. A population readout is multiplication followed by addition
+    ## 4. A weighted population readout
 
-    We can now replace abstract clues with neurons. Twelve input neurons prefer
-    twelve different motion directions. The first panel shows the spike pattern
-    observed on one trial.
+    Twelve neurons have preferred directions spaced evenly around a circle.
+    Each has the same von Mises tuning shape: a smooth, periodic mean-response
+    curve centered on its preference. Counts are measured over a fixed time
+    window. For this example, the decoder assumes independent Poisson counts
+    with these means. The next two sections explain that assumption and the
+    resulting calculation in detail.
 
-    An output unit asks one concrete question: *how well does this pattern
-    support my candidate direction?* Its fixed connection weights are largest
-    for input neurons whose preferences agree with that candidate, near zero
-    for orthogonal inputs, and negative for opposite inputs. Multiply every
-    spike count by its connection weight, then add the contributions.
+    The upper-left panel contains a constructed count pattern obtained by
+    rounding a tuning profile. It is a possible observation under the model,
+    not a random trial or a measured dataset. Changing its center or strength
+    constructs a different observation. Changing only the candidate direction
+    leaves those counts unchanged and selects a different output unit.
 
-    Move the **candidate direction** slowly. You are rotating one output unit's
-    weight profile across the unchanged input pattern. The final panel shows
-    what happens when a whole bank of output units asks all candidate questions
-    at once.
+    Read the top row from left to right: observed counts, cosine connection
+    weights for one candidate, and the products of count and weight. Their sum
+    is the candidate's weighted score. The weight scale is the tuning
+    concentration (1.8 here), as required by this response model; an arbitrary
+    scale would preserve the peak but give incorrect likelihood ratios.
+
+    Repeating the calculation for all candidate directions produces the lower
+    curve. The Poisson total-expected-count term is included when computing
+    this curve; it is nearly constant for this evenly spaced population.
+    Exponentiating the log likelihood after subtracting its maximum gives
+    the plotted relative likelihood. The input axis indexes **neurons by
+    preference**; the output axis indexes **candidate stimuli**. Similar-looking
+    axes do not make the count profile itself a likelihood function.
     """)
     return
 
@@ -623,7 +730,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Center of the observed population response",
+        label="Center of the constructed count profile (degrees)",
     )
     population_strength = mo.ui.slider(
         start=2,
@@ -633,7 +740,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Response strength (roughly, spikes at the peak)",
+        label="Peak expected count used to construct the response",
     )
     candidate_direction = mo.ui.slider(
         start=-180,
@@ -674,9 +781,9 @@ def _(
     _profile = direction_tuning(
         np.array([population_center.value]), _preferences, kappa=1.8
     )[0]
-    _counts = np.rint(0.5 + population_strength.value * _profile).astype(int)
+    _counts = np.rint(population_strength.value * _profile).astype(int)
     _candidate = candidate_direction.value
-    _weights = np.cos(np.deg2rad(circular_delta(_candidate, _preferences)))
+    _weights = 1.8 * np.cos(np.deg2rad(circular_delta(_candidate, _preferences)))
     _contributions = _counts * _weights
     _candidate_score = float(np.sum(_contributions))
 
@@ -688,7 +795,10 @@ def _(
             )
         )
     )
-    _scores = 0.42 * (_weight_bank @ _counts)
+    _expected_counts = population_strength.value * direction_tuning(
+        _candidate_grid, _preferences, kappa=1.8
+    )
+    _scores = 1.8 * (_weight_bank @ _counts) - _expected_counts.sum(axis=1)
     _relative = relative_likelihood(_scores)
     _peak_direction = float(_candidate_grid[np.argmax(_scores)])
     _selected_relative = float(
@@ -715,7 +825,7 @@ def _(
     _ax_spikes.set(
         title="1 · The observed population response",
         xlabel="input neuron's preferred direction",
-        ylabel="spikes",
+        ylabel="observed spike count",
         xlim=(-195, 195),
     )
 
@@ -730,7 +840,7 @@ def _(
         xlabel="input neuron's preferred direction",
         ylabel="connection weight",
         xlim=(-195, 195),
-        ylim=(-1.12, 1.12),
+        ylim=(-2.0, 2.0),
     )
 
     _contribution_colors = np.where(
@@ -763,7 +873,7 @@ def _(
         label=f"selected output: {_candidate:+.0f}°",
     )
     _ax_likelihood.set(
-        title=f"4 · All rotated readouts form a likelihood profile",
+        title="4 · Population relative likelihood under the Poisson model",
         xlabel="candidate direction",
         ylabel="relative likelihood",
         xlim=(-180, 180),
@@ -798,7 +908,7 @@ def _(
     _ax_compass.set_yticklabels([])
     _ax_compass.set_ylim(0, _mean_radius * 1.08)
     _ax_compass.set_title(
-        f"5 · Spike-weighted compass\nmean direction = {_vector_mean:+.1f}°",
+        f"5 · Population vector\ndirection = {_vector_mean:+.1f}°",
         va="bottom",
         pad=18,
     )
@@ -811,11 +921,6 @@ def _(
         _axis.set_xticks(np.arange(-180, 181, 60))
     clean_axes(_cartesian_axes)
     _fig.tight_layout(h_pad=2.5, w_pad=1.5)
-    _candidate_relation = (
-        "aligned with" if abs(circular_delta(_candidate, _peak_direction)) <= 15
-        else "away from"
-    )
-
     mo.vstack(
         [
             population_controls,
@@ -823,26 +928,36 @@ def _(
             mo.callout(
                 mo.md(
                     f"""
-                    The selected output is **{_candidate_relation}** the
-                    population and therefore has relative likelihood
-                    **{_selected_relative:.3f}**. The best-supported direction
-                    is **{_peak_direction:+.1f}°**.
+                    The selected candidate, **{_candidate:+.0f}°**, has
+                    likelihood **{_selected_relative:.3g}** times the maximum.
+                    The maximum-likelihood direction is **{_peak_direction:+.1f}°**.
+                    Neither number is the posterior probability of an exact
+                    direction. The peak is fixed at one by the plotting scale;
+                    its height contains no information about response strength.
 
-                    In this circular, symmetric example, the same peak can be
-                    found as a very simple **spike-weighted circular average**:
-                    give each spike a unit arrow pointing in its neuron's
-                    preferred direction, add the arrows, and read the direction
-                    of the result. That gives **{_vector_mean:+.1f}°**. The full
-                    output curve retains more than that average: its width and
-                    height retain information about uncertainty and evidence
-                    strength.
+                    The circular panel assigns each spike a unit vector in its
+                    neuron's preferred direction and sums the vectors. The
+                    resulting direction is **{_vector_mean:+.1f}°**. For cosine
+                    weights and a constant expected total, this direction is
+                    also the likelihood maximum. The vector's length sets the
+                    amplitude of the cosine log-likelihood profile: a longer
+                    resultant produces a narrower relative likelihood. Keeping
+                    only its direction loses that concentration information;
+                    keeping both vector components retains it in this model.
+
+                    This equivalence depends on the tuning and noise model.
+                    Heterogeneous tuning or a varying expected total need not
+                    give a cosine log likelihood, so a population-vector angle
+                    need not be the maximum-likelihood estimate. Negative
+                    cosine weights describe signed contributions to the score,
+                    not negative probabilities or negative output firing rates.
                     """
                 ),
-                kind="success",
+                kind="info",
             ),
             mo.Html(
                 r"""
-                <div class="formula-card"><strong>The neural operation:</strong>
+                <div class="formula-card"><strong>Readout operation:</strong>
                 for each candidate, add <em>spike count × that candidate's
                 connection weight</em> across the input population. A bank of
                 candidates performs the same operation in parallel.</div>
@@ -857,23 +972,34 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 5. Only now do we need Poisson noise
+    ## 5. From a tuning curve to a single-neuron likelihood
 
-    A tuning curve is a forward prediction of a neuron's **mean** spike count.
-    A mean alone is not yet a likelihood. We also need a rule saying how
-    variable single trials are around that mean.
+    A tuning curve specifies the neuron's **expected spike count** at each
+    direction. If tuning is expressed as a firing rate, multiply it by the
+    observation duration to obtain this expected count. The mean alone does
+    not specify response probabilities: two count distributions with the same
+    mean can assign different probabilities to an observed count.
 
-    Jazayeri and Movshon use Poisson-like spike counts. For a Poisson neuron,
-    specifying the tuning-curve mean specifies the entire distribution of
-    possible counts. The figure follows one neuron through the conversion:
+    Here we assume a Poisson count distribution. Its variance equals its mean,
+    so higher expected counts also have larger absolute standard deviations.
+    Once the mean is specified, all count probabilities are determined. This
+    example includes a small additive baseline in its mean tuning curve and
+    evaluates the full Poisson likelihood, without assuming cosine weights.
 
-    1. candidate direction → predicted mean count;
-    2. predicted mean → distribution of possible observed counts;
-    3. hold the observed count fixed and read its probability backward over
-       candidate directions.
+    The left panel varies direction and displays the predicted mean. Three
+    colored points select means for the count distributions in the middle
+    panel. Each middle curve is a probability mass function over nonnegative
+    integers; only counts up to 20 are shown. The vertical line fixes the
+    observed count. Its intersections with the three curves give that count's
+    probability under the three selected directions. Evaluating this probability
+    at every direction and dividing by its maximum gives the right panel.
 
-    Change the spike count that was actually observed. A quiet response can be
-    evidence *against* directions that predict a vigorous response.
+    A useful visual comparison is between the observed-count horizontal line
+    in the first panel and the peaks in the last panel. For a positive count
+    within the tuning curve's mean range, the likelihood is largest where the
+    predicted mean equals the observed count. There are usually two such
+    directions, one on each flank. A single neuron's preferred direction is
+    therefore not generally the maximum-likelihood explanation of its response.
     """)
     return
 
@@ -907,6 +1033,7 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(
     clean_axes,
+    circular_delta,
     direction_tuning,
     math,
     mo,
@@ -933,7 +1060,35 @@ def _(
 
     _likelihood = _poisson_probability(_n_observed, _means)
     _relative = _likelihood / np.max(_likelihood)
-    _best = float(_directions[np.argmax(_likelihood)])
+    _min_mean = 0.35 + 11.0 * np.exp(-2.0 * poisson_width.value)
+    _max_mean = 11.35
+    if _n_observed <= _min_mean:
+        _best_directions = np.array([float(circular_delta(_preference + 180, 0))])
+        _count_note = (
+            "The observed count is below the smallest predicted mean. "
+            "The maximum occurs opposite the preferred direction, where the mean is smallest. "
+            "For zero spikes, every candidate still has likelihood exp(−mean); silence is informative."
+        )
+    elif _n_observed >= _max_mean:
+        _best_directions = np.array([_preference])
+        _count_note = (
+            "The observed count exceeds the largest predicted mean. "
+            "The maximum occurs at the preferred direction, which predicts the largest count. "
+            "That candidate is only the best among the specified candidates; "
+            "a relative peak of one does not say the observed count was probable."
+        )
+    else:
+        _offset = np.rad2deg(np.arccos(
+            1.0 + np.log((_n_observed - 0.35) / 11.0) / poisson_width.value
+        ))
+        _best_directions = circular_delta(
+            np.array([_preference - _offset, _preference + _offset]), 0
+        )
+        _count_note = (
+            "Two directions predict a mean equal to the observed count and have equal maximum "
+            "likelihood. The observation does not distinguish these two flanks of the tuning curve."
+        )
+    _best_text = " and ".join(f"{angle:+.1f}°" for angle in _best_directions)
     _example_directions = np.array([-75.0, 35.0, 120.0])
     _example_rates = 0.35 + 11.0 * direction_tuning(
         _example_directions, np.array([_preference]), kappa=poisson_width.value
@@ -957,8 +1112,13 @@ def _(
         xlabel="candidate direction",
         ylabel="predicted mean spikes",
         xlim=(-180, 180),
-        ylim=(0, 12.5),
+        ylim=(0, max(12.5, _n_observed + 1.5)),
     )
+    _axes[0].axhline(
+        _n_observed, color="#7c3aed", linestyle="--", linewidth=1.2,
+        label=f"observed count = {_n_observed}",
+    )
+    _axes[0].legend(frameon=False, fontsize=8)
 
     for _direction, _rate, _color in zip(
         _example_directions, _example_rates, _example_colors
@@ -990,9 +1150,10 @@ def _(
     _axes[2].fill_between(
         _directions, 0, _relative, color="#7c3aed", alpha=0.18
     )
-    _axes[2].axvline(_best, color="#182338", linestyle="--", linewidth=1.3)
+    for _best in _best_directions:
+        _axes[2].axvline(_best, color="#182338", linestyle="--", linewidth=1.3)
     _axes[2].set(
-        title=f"3 · Read P(n={_n_observed} | direction) backward",
+        title=f"3 · Likelihood with n = {_n_observed} fixed",
         xlabel="candidate direction",
         ylabel="relative likelihood",
         xlim=(-180, 180),
@@ -1003,11 +1164,6 @@ def _(
     clean_axes(_axes)
     _fig.tight_layout(w_pad=1.5)
 
-    _quiet_note = (
-        "Because the neuron was quiet, directions far from its preference can be more plausible than its preferred direction."
-        if _n_observed <= 2
-        else "Because the neuron fired vigorously, directions near its preference receive the strongest support."
-    )
     mo.vstack(
         [
             poisson_controls,
@@ -1015,30 +1171,31 @@ def _(
             mo.callout(
                 mo.md(
                     f"""
-                    {_quiet_note} The best-supported direction for this one
-                    neuron is currently near **{_best:+.1f}°**. Notice that a
-                    single neuron's likelihood may be broad or even have two
-                    equally good directions; a population resolves such
-                    ambiguities by multiplying evidence across neurons.
+                    {_count_note} The maximizing direction(s) are
+                    **{_best_text}**. Other neurons with different preferences
+                    can distinguish these candidates if their conditional
+                    response distributions differ at those directions.
 
-                    The important modeling link is now explicit: **the tuning
-                    curve supplies the expected count, and the noise law turns
-                    that expectation into the probability of the count that
-                    actually occurred.**
+                    Keep the count fixed and change tuning concentration. This
+                    changes the model's predicted means and therefore where
+                    each candidate falls in the count distribution. It does
+                    not change the observed data. The likelihood depends on
+                    both the data and this assumed response model.
                     """
                 ),
                 kind="info",
             ),
             mo.accordion(
                 {
-                    "Optional: the one Poisson formula": mo.md(
+                    "Poisson probability and log-likelihood terms": mo.md(
                         r"""For mean count $f(\theta)$ and observed count $n$,
                         the Poisson probability is
                         $P(n\mid\theta)=f(\theta)^n e^{-f(\theta)}/n!$.
                         Its log contains a spike-dependent term
-                        $n\log f(\theta)$ and an expected-rate penalty
-                        $-f(\theta)$. The next section shows why the paper can
-                        often ignore that second term at the population level."""
+                        $n\log f(\theta)$, the expected-count term
+                        $-f(\theta)$, and $-\log(n!)$. The last term is constant
+                        across directions for a fixed observation. The
+                        expected-count term generally is not."""
                     )
                 }
             ),
@@ -1051,24 +1208,43 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 6. The key shortcut: every direction spends the same population budget
+    ## 6. When a weighted sum represents the log likelihood
 
-    Here is the most important assumption behind the paper's simple weighted
-    readout. With neurons evenly covering direction and having shifted copies
-    of the same tuning shape, every direction produces roughly the same **total
-    expected population activity**. Individual cells change, but the total
-    budget stays flat.
+    For independent Poisson neurons, each candidate's population log likelihood
+    contains three terms: observed counts weighted by log expected counts,
+    minus the total expected count, minus a term involving the observed-count
+    factorials. The factorial term is constant across candidates on a fixed
+    trial. The total expected count can vary across candidates even though the
+    observed count vector is fixed.
 
-    Why does that matter? A Poisson model rewards a candidate when observed
-    spikes land in neurons it predicts, but it also penalizes a candidate for
-    all the spikes it predicted and did not receive. If every candidate predicts
-    the same total number of spikes, that penalty is the same horizontal offset
-    everywhere. It can be dropped without changing the likelihood's shape or
-    winner. What remains is just a weighted sum of observed spikes.
+    The expected-count term is part of the Poisson probability model, not a
+    separate correction applied only when too few spikes were observed. For
+    example, a silent neuron contributes minus its expected count to the log
+    likelihood. Directions predicting a large response from that silent neuron
+    are less likely than directions predicting a small response. Keeping only
+    observed-count contributions would miss this information.
 
-    Switch from **uniform coverage** to a missing wedge or lopsided gain. The
-    population budget is no longer flat, and the shortcut can diverge from the
-    full Poisson likelihood.
+    In an evenly sampled population of shifted copies of a smooth tuning curve,
+    the **total expected count is approximately constant across direction**.
+    Subtracting it shifts the entire log-likelihood curve vertically without
+    changing its shape. The weighted sum then represents the log likelihood
+    up to a candidate-independent offset. Exact constancy is the mathematical
+    condition; dense uniform coverage is one way to approximate it. Identical
+    tuning curves are not necessary if heterogeneous curves also sum to a
+    constant. A finite set of evenly spaced neurons need not give exact constancy.
+
+    The first panel plots each neuron's mean tuning curve. The middle panel
+    sums those curves vertically at each direction and expresses the sum as a
+    percentage deviation from its mean. The final panel compares the full
+    Poisson likelihood with the exponentiated weighted score that omits the
+    expected-count term; each curve is scaled separately to peak at one.
+    Here the observations are randomly sampled Poisson counts. Changing the
+    trial number draws a new count vector at the selected generating direction.
+
+    Select reduced coverage near 90° or unequal gains. The expected total now
+    depends on direction. The omitted term can alter both the maximum and the
+    profile around it. The orange line identifies the generating direction,
+    which need not equal either estimate on a noisy trial.
     """)
     return
 
@@ -1076,7 +1252,7 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     coverage_mode = mo.ui.radio(
-        options=["uniform coverage", "missing wedge", "lopsided gain"],
+        options=["uniform coverage", "reduced coverage near 90°", "unequal gains"],
         value="uniform coverage",
         inline=True,
         label="Population architecture",
@@ -1129,11 +1305,11 @@ def _(
     _preferences = np.arange(-170, 171, 20, dtype=float)
     _candidates = np.linspace(-180, 180, 721)
     _gains = np.ones_like(_preferences)
-    if coverage_mode.value == "missing wedge":
+    if coverage_mode.value == "reduced coverage near 90°":
         _gains[
             np.abs(circular_delta(_preferences, 90.0)) <= 45.0
         ] = 0.08
-    elif coverage_mode.value == "lopsided gain":
+    elif coverage_mode.value == "unequal gains":
         _gains = 1.0 + 0.62 * np.cos(
             np.deg2rad(circular_delta(_preferences, -65.0))
         )
@@ -1197,7 +1373,7 @@ def _(
     )
     _axes[1].axhline(0.0, color="#6b7280", linewidth=1.0)
     _axes[1].set(
-        title=f"Population budget; range = {_budget_range:.1f}%",
+        title=f"Expected total; range = {_budget_range:.1f}%",
         xlabel="candidate direction",
         ylabel="deviation from mean (%)",
         xlim=(-180, 180),
@@ -1216,7 +1392,7 @@ def _(
         color="#7c3aed",
         linewidth=2.2,
         linestyle="--",
-        label=f"weighted-sum shortcut: {_shortcut_peak:+.0f}°",
+        label=f"expected-count term omitted: {_shortcut_peak:+.0f}°",
     )
     _axes[2].axvline(
         assumption_direction.value,
@@ -1226,13 +1402,16 @@ def _(
         label=f"generating direction: {assumption_direction.value:+.0f}°",
     )
     _axes[2].set(
-        title="Full likelihood versus the shortcut",
+        title="Effect of the expected-count term",
         xlabel="candidate direction",
-        ylabel="relative likelihood",
+        ylabel="exponentiated score / its maximum",
         xlim=(-180, 180),
         ylim=(0, 1.08),
     )
-    _axes[2].legend(frameon=False, fontsize=7.6, loc="upper left")
+    _axes[2].legend(
+        frameon=False, fontsize=7.6, loc="upper center",
+        bbox_to_anchor=(0.5, -0.24),
+    )
     for _axis in _axes:
         _axis.set_xticks(np.arange(-180, 181, 90))
     clean_axes(_axes)
@@ -1240,9 +1419,9 @@ def _(
 
     _peak_gap = abs(float(circular_delta(_shortcut_peak, _full_peak)))
     _conclusion = (
-        "The population budget is effectively flat, so the omitted penalty is constant and the curves coincide."
+        "The expected total is effectively constant, so the curves coincide to plotting precision."
         if coverage_mode.value == "uniform coverage"
-        else f"The budget varies across directions. On this trial the shortcut and full model peaks differ by {_peak_gap:.1f}°."
+        else f"The expected total varies across directions. On this trial the two maxima differ by {_peak_gap:.1f}°."
     )
 
     mo.vstack(
@@ -1254,25 +1433,31 @@ def _(
                     f"""
                     **{coverage_mode.value.capitalize()}:** {_conclusion}
 
-                    This exposes two distinct links that are easy to blur:
+                    The solid curve is a relative likelihood under the stated
+                    model. When the expected total varies, the dashed curve is
+                    an approximation and cannot be interpreted as that model's
+                    relative likelihood. Unequal coverage does not prevent
+                    likelihood decoding: a candidate-specific offset equal to
+                    minus the expected total restores the full calculation.
+                    It does prevent the uncorrected weighted sum from being
+                    sufficient for this calculation.
 
-                    - **Tuning + a noise law** says how probable each neuron's
-                      observed count is under each candidate stimulus.
-                    - **Homogeneous population coverage** makes the total-rate
-                      penalty independent of direction, leaving a linear
-                      weighted sum of counts.
-
-                    The paper also assumes that stimulus strength scales tuning
-                    curves without changing their shape. That lets the same
-                    feedforward weights continue to represent direction when
-                    motion coherence changes.
+                    If stimulus strength multiplies all mean tuning curves by
+                    a common positive gain without changing their shape, its
+                    contribution to the count-weighted log term is independent
+                    of direction. With a constant expected total across
+                    directions, the same direction weights can then be used
+                    across gains. More observed spikes can still sharpen the
+                    direction likelihood. These cancellations concern direction
+                    at a given strength; they do not generally justify dropping
+                    the same terms when comparing strengths or signal presence.
                     """
                 ),
                 kind="warn" if coverage_mode.value != "uniform coverage" else "success",
             ),
             mo.accordion(
                 {
-                    "Optional: reveal the bookkeeping": mo.md(
+                    "Population log-likelihood terms": mo.md(
                         r"""For independent Poisson neurons, the direction-
                         dependent part of the population log likelihood is
 
@@ -1282,8 +1467,10 @@ def _(
                         The second is the total expected population activity.
                         If that second sum is flat across $\theta$, removing it
                         changes neither the curve's shape nor its maximum. For
-                        von Mises MT tuning, $\log f_i(\theta)$ reduces—up to
-                        irrelevant constants—to a cosine weight."""
+                        pure von Mises mean tuning, $\log f_i(\theta)$ reduces,
+                        up to direction-independent terms, to a cosine weight
+                        scaled by the tuning concentration. An additive firing
+                        baseline generally prevents that exact reduction."""
                     )
                 }
             ),
@@ -1296,17 +1483,36 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 7. Correlation changes the reliability of a pool
+    ## 7. Correlation and the variability of a decision variable
 
-    Independence justified multiplication. Real cortical neurons are
-    correlated, so the joint response cloud is tilted rather than circular.
-    What matters is not whether correlation exists in the abstract, but whether
-    shared fluctuations point **along** or **across** the readout direction.
+    The product rule above requires conditional independence. Correlated
+    responses generally require a joint response model: multiplying the
+    individual-neuron probabilities does not recover their joint probability.
+    Even zero pairwise correlation is insufficient to establish independence
+    in general. In the jointly Gaussian example here, zero correlation does
+    imply independence.
 
-    Use the two toy codes below. In the opponent code the decision subtracts
-    the neurons; shared fluctuations cancel. In the shared-strength code the
-    decision adds them; shared fluctuations accumulate. The weights stay fixed
-    while correlation changes the spread of the pooled decision variable.
+    This figure uses two continuous Gaussian responses, not integer Poisson
+    spike counts. For each stimulus class, the mean of each response and its
+    variance (4 response units squared) stay fixed. The correlation slider
+    changes only the covariance within each class. Thus it controls **noise
+    correlation conditional on stimulus**, not correlation induced by pooling
+    trials with different stimuli. Both classes have the same covariance.
+
+    Each point in the left panel is one pair of responses on a simulated trial.
+    Positive correlation elongates each cloud along the positive diagonal;
+    negative correlation elongates it along the opposite diagonal. The middle
+    panel projects the same trials onto a difference or sum of responses. The
+    overlap after projection determines error probability at the dashed
+    threshold. The final panel gives the analytically predicted accuracy,
+    assuming equal class probabilities and equal costs for the two errors.
+
+    In the opponent example, the class means differ along the difference
+    direction. Positive common fluctuations mostly run parallel to the decision
+    boundary and partly cancel in the subtraction. In the sum example, the
+    means differ along the positive diagonal, so those same fluctuations
+    increase variability along the readout. Correlation's effect depends on
+    its orientation relative to the stimulus-dependent mean difference.
     """)
     return
 
@@ -1327,7 +1533,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Pairwise response correlation",
+        label="Within-class response correlation",
     )
     correlation_seed = mo.ui.slider(
         start=1,
@@ -1367,12 +1573,12 @@ def _(
         _mean_a = np.array([10.0, 6.0])
         _mean_b = np.array([6.0, 10.0])
         _weights = np.array([1.0, -1.0])
-        _readout_name = "difference n₁ − n₂"
+        _readout_name = "difference r₁ − r₂"
     else:
         _mean_a = np.array([10.0, 10.0])
         _mean_b = np.array([6.0, 6.0])
         _weights = np.array([1.0, 1.0])
-        _readout_name = "sum n₁ + n₂"
+        _readout_name = "sum r₁ + r₂"
 
     _rho = correlation_strength.value
     _single_variance = 4.0
@@ -1409,11 +1615,11 @@ def _(
     _fig.patch.set_facecolor("white")
     _axes[0].scatter(
         _trials_a[:450, 0], _trials_a[:450, 1], s=12,
-        color="#2563a8", alpha=0.28, label="world A",
+        color="#2563a8", alpha=0.28, label="stimulus A",
     )
     _axes[0].scatter(
         _trials_b[:450, 0], _trials_b[:450, 1], s=12,
-        color="#d97706", alpha=0.28, label="world B",
+        color="#d97706", alpha=0.28, label="stimulus B",
     )
     _axes[0].scatter(
         [_mean_a[0], _mean_b[0]], [_mean_a[1], _mean_b[1]],
@@ -1445,11 +1651,11 @@ def _(
     _bins = np.linspace(_score_min, _score_max, 38)
     _axes[1].hist(
         _scores_a, bins=_bins, density=True, color="#2563a8",
-        alpha=0.50, label="world A",
+        alpha=0.50, label="stimulus A",
     )
     _axes[1].hist(
         _scores_b, bins=_bins, density=True, color="#d97706",
-        alpha=0.50, label="world B",
+        alpha=0.50, label="stimulus B",
     )
     _axes[1].axvline(
         _threshold, color="#7c3aed", linestyle="--", linewidth=1.8
@@ -1470,27 +1676,28 @@ def _(
     )
     _axes[2].axhline(0.5, color="#9ca3af", linestyle=":", linewidth=1.1)
     _axes[2].set(
-        title=f"Same weights, changing reliability: {_accuracy:.1%}",
+        title=f"Predicted classification accuracy: {_accuracy:.1%}",
         xlabel="pairwise correlation",
-        ylabel="ideal accuracy for this fixed pool",
+        ylabel="accuracy with the specified readout",
         xlim=(-0.85, 0.85),
         ylim=(0.48, 1.01),
     )
     clean_axes(_axes)
     _fig.tight_layout(w_pad=1.5)
 
-    _effect = (
-        "Positive shared fluctuations cancel in the subtraction, narrowing the decision variable."
-        if _opponent and _rho > 0
-        else (
-            "Positive shared fluctuations add together, widening the decision variable."
-            if (not _opponent and _rho > 0)
-            else (
-                "Negative correlation widens a difference readout."
-                if _opponent else "Negative correlation partly cancels in a sum readout."
-            )
+    if abs(_rho) < 1e-10:
+        _effect = "At zero correlation, the variance of either sum or difference is 8."
+    elif _rho > 0:
+        _effect = (
+            "Positive correlated fluctuations partly cancel in the subtraction, narrowing the decision variable."
+            if _opponent
+            else "Positive correlated fluctuations add together, widening the decision variable."
         )
-    )
+    else:
+        _effect = (
+            "Negative correlation widens a difference readout."
+            if _opponent else "Negative correlation partly cancels in a sum readout."
+        )
     mo.vstack(
         [
             correlation_controls,
@@ -1503,15 +1710,20 @@ def _(
                     The pooled variance is now **{_score_variance:.2f}** and
                     predicted accuracy is **{_accuracy:.1%}**. {_effect}
 
-                    **What the paper does:** its feedforward decoder does not
-                    adjust weights to exploit the correlation matrix. The
-                    authors argue that stimulus-dependent correlations are not
-                    straightforwardly available to a fixed biological decoder.
-                    But they do include an empirically motivated correlation
-                    structure when computing the variance—and therefore the
-                    behavioral performance—of their model. Ignoring correlation
-                    in the readout is not the same as pretending correlation
-                    has no effect.
+                    For these symmetric Gaussian examples, the selected sum
+                    or difference remains the optimal linear readout direction
+                    as correlation changes. Only its scale in the exact log
+                    likelihood ratio changes. In a general population,
+                    covariance can also change the optimal relative weights.
+                    The result here therefore illustrates correlation geometry,
+                    not a general rule that fixed weights are optimal.
+
+                    In the [paper's supplement](https://www.cns.nyu.edu/~tony/Publications/jazayeri-movshon-2006-supp.pdf),
+                    decoder weights are derived without accounting for
+                    correlations, while predicted behavioral variability
+                    includes a specified correlation structure. Computing the
+                    distribution of a decoder's output and constructing a
+                    correlation-aware decoder are separate operations.
                     """
                 ),
                 kind="info",
@@ -1525,12 +1737,36 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## 8. One likelihood landscape, several behaviors
+    ## 8. Detection, estimation, and discrimination
 
-    The payoff of representing the entire likelihood is reuse. The same sensory
-    population need not be decoded by a new bespoke rule for every task. Move
-    the generating direction and the two discrimination alternatives. Each
-    panel receives the same log-likelihood curve and asks a different question.
+    A direction likelihood compares candidate directions within a specified
+    signal model. **Detection also requires a signal-absent model.** The
+    statistically relevant quantity for two specified hypotheses is the
+    likelihood ratio: the probability of the observed response under one
+    hypothesis divided by its probability under the other. The height of a
+    likelihood curve that was separately rescaled on each trial is insufficient
+    for this comparison.
+
+    Here the signal model has 18 independent Poisson neurons with von Mises
+    mean tuning (peak expected count 8, concentration 1.9). The noise model
+    gives every neuron the same expected count, chosen to match the population's
+    average expected total under the signal model. This makes response pattern,
+    rather than simply total count, informative about signal presence. Every
+    point on the purple curve is the log likelihood ratio for a signal at that
+    direction versus this *same* noise model. Expected-count terms are retained.
+
+    The trial controls generate a single count vector. At signal fraction zero,
+    it is sampled from the noise model; at one, from the signal model at the
+    selected direction. Intermediate fractions interpolate the generating
+    means, while the decoder continues to compare the two fixed endpoint
+    models. The same observed vector is used in all three panels.
+
+    Detection tests the specified direction 0° against noise. Estimation
+    selects the maximum over all signal directions. Discrimination compares
+    only the two specified directions. Subtracting their plotted values
+    cancels the common noise reference and gives the log likelihood ratio
+    between the two signal alternatives. The reference therefore supports
+    detection while preserving all within-signal direction comparisons.
     """)
     return
 
@@ -1545,7 +1781,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Center of the observed sensory response",
+        label="Generating direction of the signal component (degrees)",
     )
     task_separation = mo.ui.slider(
         start=20,
@@ -1558,19 +1794,28 @@ def _(mo):
         label="Separation of the two known alternatives",
     )
     detection_criterion = mo.ui.slider(
-        start=-8.0,
-        stop=10.0,
-        step=1.0,
-        value=5.0,
+        start=-20.0,
+        stop=60.0,
+        step=5.0,
+        value=0.0,
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Detection criterion on the fixed log-likelihood scale",
+        label="Detection criterion: log likelihood ratio",
+    )
+    task_signal_fraction = mo.ui.slider(
+        start=0.0, stop=1.0, step=0.1, value=1.0, debounce=True,
+        show_value=True, full_width=True,
+        label="Generating signal fraction (0 = noise model, 1 = signal model)",
+    )
+    task_seed = mo.ui.slider(
+        start=1, stop=30, step=1, value=4, debounce=True,
+        show_value=True, full_width=True, label="Trial number",
     )
     task_controls = mo.vstack(
-        [task_direction, task_separation, detection_criterion], gap=0.5
+        [task_direction, task_signal_fraction, task_seed, task_separation, detection_criterion], gap=0.5
     )
-    return detection_criterion, task_controls, task_direction, task_separation
+    return detection_criterion, task_controls, task_direction, task_seed, task_separation, task_signal_fraction
 
 
 @app.cell(hide_code=True)
@@ -1583,25 +1828,28 @@ def _(
     plt,
     task_controls,
     task_direction,
+    task_seed,
     task_separation,
+    task_signal_fraction,
 ):
     _preferences = np.arange(-180, 180, 20, dtype=float)
-    _counts = np.rint(
-        0.4
-        + 8.0
-        * direction_tuning(
-            np.array([task_direction.value]), _preferences, kappa=1.9
-        )[0]
-    ).astype(int)
     _grid = np.linspace(-180, 180, 721)
-    _bank = np.cos(
-        np.deg2rad(
-            (_grid[:, np.newaxis] - _preferences[np.newaxis, :] + 180)
-            % 360
-            - 180
-        )
+    _signal_means = 8.0 * direction_tuning(_grid, _preferences, kappa=1.9)
+    # Use one full period without its duplicated endpoint for the mean.
+    _noise_means = np.full(len(_preferences), _signal_means[:-1].mean())
+    _generating_signal_means = 8.0 * direction_tuning(
+        np.array([task_direction.value]), _preferences, kappa=1.9
+    )[0]
+    _trial_means = (
+        task_signal_fraction.value * _generating_signal_means
+        + (1.0 - task_signal_fraction.value) * _noise_means
     )
-    _log_likelihood = 0.36 * (_bank @ _counts)
+    _counts = np.random.default_rng(task_seed.value).poisson(_trial_means)
+    # Count-factorial terms cancel between these two models for the same data.
+    _log_likelihood = (
+        np.log(_signal_means / _noise_means) @ _counts
+        - _signal_means.sum(axis=1) + _noise_means.sum()
+    )
     _peak = float(_grid[np.argmax(_log_likelihood)])
     _known_direction = 0.0
     _known_value = float(np.interp(_known_direction, _grid, _log_likelihood))
@@ -1610,9 +1858,13 @@ def _(
     _right_alt = task_separation.value / 2.0
     _left_value = float(np.interp(_left_alt, _grid, _log_likelihood))
     _right_value = float(np.interp(_right_alt, _grid, _log_likelihood))
-    _chosen_alt = _left_alt if _left_value > _right_value else _right_alt
-    _lower_limit = min(-11.0, float(np.min(_log_likelihood)) - 1.0)
-    _upper_limit = max(11.0, float(np.max(_log_likelihood)) + 1.0)
+    _difference = _right_value - _left_value
+    _choice = (
+        "equal likelihoods" if np.isclose(_difference, 0, atol=1e-10)
+        else f"choose {(_right_alt if _difference > 0 else _left_alt):+.0f}°"
+    )
+    _lower_limit = min(-5.0, float(np.min(_log_likelihood)) - 5.0, detection_criterion.value - 5.0)
+    _upper_limit = max(5.0, float(np.max(_log_likelihood)) + 5.0, detection_criterion.value + 5.0)
 
     _fig, _axes = plt.subplots(1, 3, figsize=(13.0, 4.0), sharey=True)
     _fig.patch.set_facecolor("white")
@@ -1628,6 +1880,7 @@ def _(
             ylim=(_lower_limit, _upper_limit),
         )
         _axis.set_xticks(np.arange(-180, 181, 90))
+        _axis.axhline(0, color="#9ca3af", linewidth=0.9, linestyle=":")
 
     _axes[0].axhline(
         detection_criterion.value, color="#d97706", linestyle="--",
@@ -1635,8 +1888,8 @@ def _(
     )
     _axes[0].scatter([0], [_known_value], color="#182338", s=65, zorder=4)
     _axes[0].set(
-        title=f"Detection: {'present' if _detect else 'absent'}",
-        ylabel="log-likelihood score (fixed reference)",
+        title=f"0° detection: {'signal' if _detect else 'noise'} response",
+        ylabel="log likelihood ratio: signal / noise",
     )
     _axes[0].legend(frameon=False, fontsize=8)
 
@@ -1644,7 +1897,7 @@ def _(
     _axes[1].scatter(
         [_peak], [np.max(_log_likelihood)], color="#182338", s=65, zorder=4
     )
-    _axes[1].set(title=f"Identification: choose the peak {_peak:+.0f}°")
+    _axes[1].set(title=f"Direction estimate: {_peak:+.0f}°")
 
     _axes[2].scatter(
         [_left_alt, _right_alt], [_left_value, _right_value],
@@ -1654,7 +1907,7 @@ def _(
         [_left_alt, _right_alt], 0, [_left_value, _right_value],
         colors=["#2563a8", "#d97706"], linestyles=":", linewidth=1.4,
     )
-    _axes[2].set(title=f"Discrimination: choose {_chosen_alt:+.0f}°")
+    _axes[2].set(title=f"Discrimination: {_choice}")
     clean_axes(_axes)
     _fig.tight_layout(w_pad=1.5)
 
@@ -1665,22 +1918,36 @@ def _(
             mo.callout(
                 mo.md(
                     f"""
-                    - **Detection** reads the likelihood at the expected
-                      direction (here 0°) on a fixed log-likelihood scale and
-                      compares **{_known_value:.2f}** with a criterion.
-                    - **Identification** finds the largest value over all
-                      candidates, here **{_peak:+.0f}°**.
-                    - **Two-choice discrimination** reads only the two known
-                      alternatives, **{_left_alt:+.0f}°** and
-                      **{_right_alt:+.0f}°**, and chooses the larger value.
+                    **Detection:** at 0°, the log likelihood ratio is
+                    **{_known_value:.2f}**, compared with criterion
+                    **{detection_criterion.value:.2f}**. Zero means equal
+                    likelihood under the specified signal and noise hypotheses.
+                    A zero criterion minimizes classification error for equal
+                    prior probabilities and equal error costs. Other priors or
+                    costs generally require a different criterion. Detecting
+                    a signal of *unknown* direction is a different composite
+                    hypothesis problem; it requires specifying how directions
+                    are combined, rather than simply reusing the 0° test.
 
-                    Different decision rules sit downstream of one reusable
-                    sensory representation. With multiple cues, independent
-                    log-likelihood landscapes can also be added before any of
-                    these decisions is made.
+                    **Estimation:** the maximum-likelihood direction is
+                    **{_peak:+.0f}°**. This rule always returns a direction,
+                    including on noise-only trials, because it searches only
+                    signal directions. It is not evidence by itself that a
+                    signal was present. A Bayesian estimate additionally
+                    depends on the prior and the loss assigned to estimation
+                    errors; for example, squared error favors a posterior mean
+                    in a noncircular scalar problem.
+
+                    **Discrimination:** the alternatives are
+                    **{_left_alt:+.0f}°** and **{_right_alt:+.0f}°**. The right
+                    minus left log likelihood is **{_difference:.2f}**. Its sign
+                    selects the larger likelihood under equal priors and equal
+                    error costs. Two points on a sharply peaked curve can both
+                    have low values if neither specified alternative is near
+                    the estimate. Forced choice still compares those two points.
                     """
                 ),
-                kind="success",
+                kind="info",
             ),
         ],
         gap=0.7,
@@ -1693,44 +1960,64 @@ def _(mo):
     mo.vstack(
         [
             mo.md(r"""
-            ## The whole story, without the derivation
+            ## 9. What the representation contains
 
-            1. A tuning curve predicts a neuron's mean response under each
-               possible stimulus.
-            2. A noise model turns each predicted mean into a probability for
-               the response that actually occurred. Read across candidate
-               stimuli, those probabilities form that neuron's likelihood.
-            3. Independent neurons multiply their likelihoods. In log space,
-               their contributions add.
-            4. With Poisson-like variability, each observed spike contributes
-               a fixed copy of the log tuning curve—a feedforward connection
-               weight.
-            5. With homogeneous coverage, total expected population activity
-               is constant across stimuli. The remaining stimulus-dependent
-               calculation is a weighted sum of spike counts.
-            6. Correlations change the variability of that pooled sum. The
-               paper ignores them when choosing decoder weights but includes
-               them when predicting performance.
+            The [paper](https://www.cns.nyu.edu/~tony/Publications/jazayeri-movshon-2006.pdf)
+            proposes a feedforward population transformation whose output
+            represents a log-likelihood function under specified encoding
+            assumptions. An output unit corresponds to a candidate stimulus;
+            its weights depend on the input neurons' tuning and response
+            statistics. This supplies a shared representation for several
+            perceptual tasks. It is a model of a possible computation, rather
+            than direct evidence that recorded neurons explicitly implement
+            each step shown here.
 
-            The deep idea is not “the brain computes one best direction.” It is
-            that a simple population transformation can preserve an entire
-            landscape of sensory support, after which detection, identification,
-            discrimination, cue combination, priors, and temporal accumulation
-            become downstream operations on a common currency.
+            The examples distinguish several operations that can preserve the
+            same maximum while retaining different statistical information:
+
+            | Operation | What is preserved, and what changes? |
+            |---|---|
+            | Multiply a likelihood by a positive constant independent of stimulus | All likelihood ratios and the maximum are preserved. Absolute scale changes. |
+            | Add a constant independent of stimulus to log likelihood | All log-likelihood differences and the maximum are preserved. |
+            | Multiply log likelihood by a positive constant | The maximum is preserved, but likelihood ratios and concentration change. |
+            | Keep only the maximizing stimulus | The estimate is retained, but the rest of the profile is discarded. |
+            | Multiply by a prior and normalize | This constructs a posterior; relative probabilities and the maximum can change. |
+
+            A candidate-independent factor may depend on the observed response.
+            It can be removed when comparing directions within that trial, but
+            its removal does not automatically permit comparing heights across
+            trials or between signal and noise models. Which terms may be
+            removed depends on the hypotheses being compared.
+
+            The population examples use exact Poisson probabilities, not just
+            a qualitative assumption of variable firing. Other response models
+            can also admit linear log-likelihood readouts, but this requires
+            checking the form of their stimulus-dependent terms. The
+            [supplement](https://www.cns.nyu.edu/~tony/Publications/jazayeri-movshon-2006-supp.pdf)
+            discusses extensions beyond Poisson statistics. Approximate
+            mean–variance proportionality alone is insufficient to establish
+            that log tuning curves give the appropriate weights.
+
+            When examining a new decoder, first identify the response model,
+            the observation held fixed, and the candidate stimuli on the axis.
+            Then determine whether its output is a log likelihood, an
+            approximation to one, or a decision score. Finally specify the
+            prior and decision objective before calling the downstream
+            behavior optimal. These distinctions make the visual profile
+            quantitatively interpretable.
             """),
             mo.callout(
                 mo.md(r"""
-                **Source and scope.** This tutorial is based on M. Jazayeri and
+                **Reference.** M. Jazayeri and
                 J. A. Movshon, “Optimal representation of sensory information
                 by neural populations,” *Nature Neuroscience* 9, 690–696
                 (2006), [paper](https://www.cns.nyu.edu/~tony/Publications/jazayeri-movshon-2006.pdf)
                 and [supplement](https://www.cns.nyu.edu/~tony/Publications/jazayeri-movshon-2006-supp.pdf).
-                Several displays deliberately use simplified or continuous
-                toy responses to isolate concepts. They should not be read as
-                new empirical fits or exact reproductions of the paper's
-                simulations.
+                The categorical, Gaussian, and Poisson examples here are
+                separate teaching models. Their parameters are chosen for
+                illustration, not estimated from the paper's experiments.
                 """),
-                kind="warn",
+                kind="info",
             ),
         ],
         gap=0.8,

@@ -1,9 +1,13 @@
 # Likelihood and neural populations
 
-An interactive marimo tutorial inspired by Jazayeri & Movshon (2006). It builds
-from the meaning of likelihood to multiplication, log-likelihood accumulation,
-weighted population readout, the Poisson link, homogeneous-population
-assumptions, correlations, and task-level decisions.
+An interactive marimo tutorial accompanying Jazayeri & Movshon (2006). It
+distinguishes response probability, likelihood, and posterior probability,
+then develops conditional independence, log likelihood, Poisson population
+readouts, expected-count corrections, and noise correlation through figures.
+The task examples use an explicit signal-versus-noise likelihood ratio for
+detection and explain the assumptions behind estimation and discrimination.
+Expanded figure explanations identify the data held fixed, the response model,
+and the meaning of each plotting scale. All numerical examples are illustrative.
 
 Run it with:
 
@@ -11,7 +15,7 @@ Run it with:
 marimo edit likelihood_population_tutorial.py
 ```
 
-The project settings make cells instantiate automatically and rerun reactively
+Code starts folded. The project settings make cells instantiate automatically and rerun reactively
 when a control changes. Build the editable, pre-executed WebAssembly site with:
 
 ```powershell
