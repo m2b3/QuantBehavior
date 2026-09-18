@@ -378,12 +378,25 @@ def _(mo):
 
     ## 2. Combining conditionally independent measurements
 
-    Consider two measurements of the same scalar stimulus. Each has Gaussian
-    error centered on the true stimulus, with a known standard deviation. The
-    sliders specify the two observed measurements and their noise standard
-    deviations. For each candidate stimulus, the model evaluates the density
-    of each observed measurement. Their product is the joint likelihood if
-    the errors are **independent conditional on that stimulus**.
+    Imagine **two position sensors measuring the same stationary object's
+    horizontal position**. Both report centimetres relative to the same zero
+    point; negative values mean left of zero. The object's true position is
+    the **scalar stimulus**: one unknown number shared by both sensors. Their
+    readings can differ because each sensor adds measurement noise.
+
+    At any fixed true position, repeated readings from each sensor would form
+    a Gaussian distribution centered on that position, with a known noise
+    standard deviation. Here we take **one observed reading from each sensor**.
+    The sliders set those readings and each sensor's noise standard deviation.
+    The two bell-shaped curves below are the corresponding **likelihood
+    functions**: with the readings held fixed, each curve shows how well
+    different candidate positions account for one sensor's reading.
+
+    For each candidate position, the model evaluates the density of each
+    observed reading. Their product is the joint likelihood if the errors are
+    **independent conditional on that position**. We assume the sensors have
+    separate sources of noise, with no shared disturbance once the true
+    position is fixed.
 
     In the upper panel, both likelihoods are divided by their individual
     maxima. Multiplying these relative curves gives the correct shape of the
@@ -391,12 +404,13 @@ def _(mo):
     to make its width easy to compare. All these rescalings are constant across
     candidate stimuli for the selected data and noise settings.
 
-    With equal noise, the joint maximum lies halfway between the measurements.
-    With unequal noise, it lies closer to the measurement with the smaller
-    standard deviation. A narrower input curve falls faster as a candidate
-    moves away from its measurement, so it contributes more to locating the
-    joint maximum. Both measurements refer to one common stimulus; combining
-    measurements of different stimuli would require a different model.
+    With equal noise, the joint maximum lies halfway between the sensor
+    readings. With unequal noise, it lies closer to the reading from the sensor
+    with the smaller standard deviation. A narrower input curve falls faster
+    as a candidate moves away from its reading, so it contributes more to locating the
+    joint maximum. Both sensors measure the same object's position; combining
+    readings from sensors observing different objects would require a different
+    model.
     """)
     return
 
@@ -411,7 +425,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Observed measurement 1",
+        label="Sensor 1: observed position (cm)",
     )
     clue_two_center = mo.ui.slider(
         start=-80,
@@ -421,7 +435,7 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Observed measurement 2",
+        label="Sensor 2: observed position (cm)",
     )
     clue_width = mo.ui.slider(
         start=12,
@@ -431,12 +445,12 @@ def _(mo):
         debounce=True,
         show_value=True,
         full_width=True,
-        label="Noise standard deviation: measurement 1",
+        label="Sensor 1: noise standard deviation (cm)",
     )
     clue_two_width = mo.ui.slider(
         start=12, stop=60, step=4, value=32, debounce=True,
         show_value=True, full_width=True,
-        label="Noise standard deviation: measurement 2",
+        label="Sensor 2: noise standard deviation (cm)",
     )
     clue_controls = mo.vstack(
         [clue_one_center, clue_two_center, clue_width, clue_two_width], gap=0.5
@@ -472,9 +486,9 @@ def _(
         2, 1, figsize=(10.8, 6.7), sharex=True
     )
     _fig.patch.set_facecolor("white")
-    _ax_parts.plot(_x, _l1, color="#2563a8", linewidth=2.5, label="measurement 1")
+    _ax_parts.plot(_x, _l1, color="#2563a8", linewidth=2.5, label="sensor 1")
     _ax_parts.fill_between(_x, 0, _l1, color="#2563a8", alpha=0.12)
-    _ax_parts.plot(_x, _l2, color="#d97706", linewidth=2.5, label="measurement 2")
+    _ax_parts.plot(_x, _l2, color="#d97706", linewidth=2.5, label="sensor 2")
     _ax_parts.fill_between(_x, 0, _l2, color="#d97706", alpha=0.12)
     _ax_parts.set(
         title="Individual likelihoods, each scaled to peak at 1",
@@ -490,13 +504,13 @@ def _(
     _ax_joint.text(
         _best_x,
         1.08,
-        f"maximum-likelihood estimate = {_best_x:.1f}",
+        f"maximum-likelihood position = {_best_x:.1f} cm",
         ha="center",
         fontsize=9.5,
     )
     _ax_joint.set(
         title="Joint likelihood: product rescaled to peak at 1",
-        xlabel="candidate stimulus",
+        xlabel="candidate object position (cm)",
         ylabel="relative likelihood",
         xlim=(-110, 110),
         ylim=(0, 1.22),
@@ -511,9 +525,12 @@ def _(
             mo.callout(
                 mo.md(
                     f"""
-                    The joint maximum is **{_best_x:.1f}**. Its Gaussian width
-                    parameter is **{_joint_sd:.1f}**, compared with **{_width}**
-                    and **{_width_two}** for the individual measurements.
+                    Sensor 1 reads **{clue_one_center.value} cm** and sensor 2
+                    reads **{clue_two_center.value} cm**. The joint maximum
+                    estimates the object's position as **{_best_x:.1f} cm**.
+                    Its Gaussian width parameter is **{_joint_sd:.1f} cm**,
+                    compared with **{_width} cm** and **{_width_two} cm** for
+                    the individual sensor likelihoods.
                     With equal noise, combining two independent measurements
                     reduces this width by a factor of approximately 1.41.
                     Under a flat prior over the real line, these particular
