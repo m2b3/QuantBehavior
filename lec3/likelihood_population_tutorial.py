@@ -177,19 +177,184 @@ def _(mo):
     mo.md(r"""
     <div class="likelihood-hero">
       <h1>Likelihood and population decoding</h1>
-      <p>Start with three neurons and a table of their possible responses. Learn how to compare stimuli using the responses we observe, then see how the same idea extends to larger neural populations and perceptual decisions.</p>
-    </div>
-
-    <div class="concept-chain">
-      <div class="concept-step"><strong>1 · Response model</strong><span>For each stimulus, list the probabilities of each neuron's possible responses.</span></div>
-      <div class="concept-step"><strong>2 · Observed data</strong><span>Record each neuron's response on one trial.</span></div>
-      <div class="concept-step"><strong>3 · Likelihood</strong><span>Ask how probable these same responses would be under each possible stimulus.</span></div>
-      <div class="concept-step"><strong>4 · Population readout</strong><span>Combine the responses to estimate the stimulus.</span></div>
+      <p>Begin by counting the outcomes of coin tosses. Then use the same probability rules to combine neural responses, compare possible stimuli, and understand perceptual decisions.</p>
     </div>
 
     This tutorial accompanies Jazayeri & Movshon (2006). All numerical examples
     below are illustrative models; they do not reproduce recorded neural data.
 
+    ## 0. Start with two coin tosses
+
+    Toss a **fair coin twice** and write down the results in order. Use
+    **H** for heads and **T** for tails. One trial consists of the pair of
+    tosses: **HT** means heads first, then tails.
+
+    Each toss has probability $1/2$ of heads and $1/2$ of tails. We also
+    assume the tosses are **independent**: knowing the first result does
+    not change the probabilities for the second toss.
+
+    ### 0.1 Count the possible outcomes
+
+    The first toss has two possibilities. For **each** of them, the second
+    toss has two possibilities. Write them all out:
+
+    | Ordered outcome | First toss | Second toss |
+    |---|---|---|
+    | **HH** | Heads | Heads |
+    | **HT** | Heads | Tails |
+    | **TH** | Tails | Heads |
+    | **TT** | Tails | Tails |
+
+    There are **four equally likely outcomes** for these fair, independent
+    tosses. We can therefore find an event's probability by counting the
+    outcomes that satisfy it and dividing by four.
+
+    - **First toss is heads:** HH and HT — 2 out of 4, so $P(H_1)=1/2$.
+    - **Second toss is heads:** HH and TH — 2 out of 4, so $P(H_2)=1/2$.
+    - **Both tosses are heads:** HH only — 1 out of 4, so $P(H_1\text{ and }H_2)=1/4$.
+
+    Here $H_1$ means “heads on toss 1” and $H_2$ means “heads on toss 2.”
+    Each panel below contains the same four outcomes. The colored squares
+    are the ones that satisfy the event named above that panel.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(Rectangle, plt):
+    _outcomes = (("HH", "HT"), ("TH", "TT"))
+    _events = (
+        ("First toss is heads", "#2563a8", lambda row, column: row == 0),
+        ("Second toss is heads", "#d97706", lambda row, column: column == 0),
+        ("Both tosses are heads", "#7c3aed", lambda row, column: row == 0 and column == 0),
+    )
+    _fig, _axes = plt.subplots(1, 3, figsize=(11.7, 3.4), layout="constrained")
+    _fig.patch.set_facecolor("white")
+    for _axis, (_title, _color, _matches) in zip(_axes, _events):
+        _count = 0
+        for _row in range(2):
+            for _column in range(2):
+                _selected = _matches(_row, _column)
+                _count += int(_selected)
+                _axis.add_patch(
+                    Rectangle(
+                        (_column, _row), 1, 1,
+                        facecolor=_color if _selected else "#f1f4f8",
+                        edgecolor="white", linewidth=3,
+                    )
+                )
+                _axis.text(
+                    _column + 0.5, _row + 0.5, _outcomes[_row][_column],
+                    ha="center", va="center", fontsize=18,
+                    color="white" if _selected else "#5f6b7c",
+                    fontweight="bold" if _selected else "normal",
+                )
+        _axis.set(
+            title=f"{_title}\n{_count} of 4 outcomes",
+            xlim=(0, 2), ylim=(2, 0), aspect="equal",
+        )
+        _axis.set_xticks([0.5, 1.5], ["Toss 2: H", "Toss 2: T"])
+        _axis.set_yticks([0.5, 1.5], ["Toss 1: H", "Toss 1: T"])
+        _axis.tick_params(length=0, labelsize=9)
+        _axis.title.set_size(11)
+        for _spine in _axis.spines.values():
+            _spine.set_visible(False)
+    _fig
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 0.2 Multiplication gives the same answer
+
+    Half the outcomes have heads on the first toss: **HH, HT**.
+    Within that group, half also have heads on the second toss: **HH**.
+    So the fraction with both is **half of a half**, or one quarter.
+
+    Independence is what lets us use the same $1/2$ for the second toss
+    after selecting the trials whose first toss was heads. In symbols,
+
+    $$
+    P(H_1\text{ and }H_2)
+    = P(H_1)\times P(H_2)
+    = \frac{1}{2}\times\frac{1}{2}
+    = \frac{1}{4}.
+    $$
+
+    **Counting and multiplication agree:** one of the four outcomes is HH,
+    and the product of the two heads probabilities is $1/4$. Each of the
+    other ordered pairs also has probability $1/4$; the four probabilities
+    add to one.
+
+    These are probabilities of **possible outcomes**, not a promise that
+    four actual trials will produce each pair once. Over many trials, we
+    expect about one quarter of the pairs to be HH.
+
+    **Why independence matters.** Suppose we toss once and simply copy
+    that result into the second position. Both positions still individually
+    have a $1/2$ chance of heads, but now only HH and TT can occur.
+    The probability of HH is $1/2$, not $1/4$: the results are dependent,
+    so multiplying their individual probabilities would be wrong.
+
+    ### 0.3 Add one more toss
+
+    Before reading on, predict the probability of **three heads in order**
+    with three fair, independent tosses.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.vstack(
+        [
+            mo.accordion(
+                {
+                    "Check your prediction: count all eight outcomes": mo.md(r"""
+                    The eight equally likely ordered outcomes are:
+
+                    **HHH, HHT, HTH, HTT, THH, THT, TTH, TTT.**
+
+                    Only **HHH** is three heads, so counting gives $1/8$.
+                    Multiplication gives the same result:
+
+                    $$
+                    P(H_1\text{ and }H_2\text{ and }H_3)
+                    = \frac12\times\frac12\times\frac12
+                    = \frac18.
+                    $$
+
+                    The counts shrink from eight possible sequences, to
+                    four starting with H, to two starting with HH, to one
+                    starting with HHH. Each independent toss supplies
+                    another factor of $1/2$.
+                    """)
+                }
+            ),
+            mo.md(r"""
+            Next we will use the same reasoning for **three neurons**.
+            Their response probabilities need not be $1/2$. For a given
+            stimulus, we will look up the probability of each observed
+            response and multiply the three values, assuming the neurons'
+            responses are independent **when that stimulus is held fixed**.
+
+            <div class="concept-chain">
+              <div class="concept-step"><strong>1 · Response model</strong><span>For each stimulus, list the probabilities of each neuron's possible responses.</span></div>
+              <div class="concept-step"><strong>2 · Observed data</strong><span>Record each neuron's response on one trial.</span></div>
+              <div class="concept-step"><strong>3 · Likelihood</strong><span>Ask how probable these same responses would be under each possible stimulus.</span></div>
+              <div class="concept-step"><strong>4 · Population readout</strong><span>Combine the responses to estimate the stimulus.</span></div>
+            </div>
+            """),
+        ],
+        gap=0.7,
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## 1. From a neural response to evidence about a stimulus
 
     ### 1.1 Learn how the neurons respond

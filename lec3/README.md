@@ -1,8 +1,10 @@
 # Likelihood and neural populations
 
 An interactive marimo tutorial accompanying Jazayeri & Movshon (2006). It
-starts with three neurons, three discrete response categories, and an explicit
-table of response probabilities for each stimulus. Worked examples build from
+starts by counting coin-toss outcomes and checking the multiplication rule
+for independent events. It then introduces three neurons, three discrete
+response categories, and an explicit table of response probabilities for
+each stimulus. Worked examples build from
 one neuron's likelihood to the product for all three neurons, followed by
 interactive response choices. Linked panels highlight each observed response,
 plot the individual likelihoods, and show their joint product. A collapsed
