@@ -1,9 +1,12 @@
 # Likelihood and neural populations
 
 An interactive marimo tutorial accompanying Jazayeri & Movshon (2006). It
-distinguishes response probability, likelihood, and posterior probability,
-then develops conditional independence, log likelihood, Poisson population
-readouts, expected-count corrections, and noise correlation through figures.
+starts with three neurons, three discrete response categories, and an explicit
+table of response probabilities for each stimulus. Worked examples build from
+one neuron's likelihood to the product for all three neurons, followed by
+interactive response choices. It then develops continuous measurements, log
+likelihood, Poisson population readouts, expected-count corrections, and noise
+correlation through figures.
 The task examples use an explicit signal-versus-noise likelihood ratio for
 detection and explain the assumptions behind estimation and discrimination.
 Expanded figure explanations identify the data held fixed, the response model,
