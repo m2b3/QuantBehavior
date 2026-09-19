@@ -190,57 +190,96 @@ def _(mo):
     This tutorial accompanies Jazayeri & Movshon (2006). All numerical examples
     below are illustrative models; they do not reproduce recorded neural data.
 
-    ## 1. From three neurons to a likelihood
+    ## 1. From a neural response to evidence about a stimulus
 
-    ### 1.1 The setup: stimuli, neurons, and possible responses
+    ### 1.1 Learn how the neurons respond
 
-    Imagine showing an animal a patch of moving dots. On each trial, all the
-    dots move in **one of three directions: leftward, upward, or rightward**.
-    We record from **three neurons at the same time**, called neuron 1,
-    neuron 2, and neuron 3. All three neurons see the same stimulus on that
-    trial.
+    Imagine an animal watching moving dots. On each trial, the dots move
+    **leftward, upward, or rightward**. We record **three neurons at the same
+    time**, so all three respond to the same direction.
 
-    For each neuron, we count spikes during the same 100-millisecond window.
-    To keep the example simple, we put that count into one of **three discrete
-    response categories**: **low** means 0–4 spikes, **medium** means 5–9 spikes,
-    and **high** means 10 or more spikes. Each neuron therefore gives exactly
-    one category on a trial. A possible recording is “neuron 1: high,
-    neuron 2: high, neuron 3: low.” Those are three observations from one
-    trial, one per neuron.
+    We count each neuron's spikes during a 100-millisecond window and give
+    it one of three labels: **low** (0–4 spikes), **medium** (5–9 spikes), or
+    **high** (10 or more spikes). Each neuron contributes one label to the
+    recording. Our eventual task is to use those three labels to work out
+    which direction was shown.
 
-    A neuron's response is variable: showing the same motion again does not
-    always produce the same category. Suppose we have already repeated each
-    direction many times and used those trials to learn how often each
-    category occurs for each neuron. We treat those probabilities as known
-    in this example. The numbers below are invented for teaching.
+    First we need to learn how each neuron responds to a **known** direction.
+    We show each direction repeatedly and count how often low, medium, and
+    high occur. Repeating a stimulus does not guarantee the same response:
+    neural responses vary from trial to trial.
 
-    The neurons have different response patterns. Neuron 1 most often gives
-    a high response for rightward motion, neuron 2 for upward motion, and
-    neuron 3 for leftward motion. This does not mean that a high response
-    identifies a direction with certainty: each response is possible under
-    every direction.
-
-    **First ask the forward question:** if we show a particular direction,
-    what response might each neuron give? The table answers this question.
-    Choose a neuron and a stimulus, then read across the three possible
-    responses.
+    The table below is our **response model**. Its numbers are invented for
+    this lesson, and we will treat them as known. Choose a neuron and a
+    direction, then read across: the three entries give the probabilities
+    of that neuron's possible responses.
     """)
     return
 
 
 @app.cell(hide_code=True)
-def _(np):
+def _(Rectangle, np):
     intro_directions = ("leftward", "upward", "rightward")
     intro_responses = ("low", "medium", "high")
+    intro_neuron_colors = ("#2563a8", "#d97706", "#16846b")
     # Axes: neuron, stimulus direction, response category.
     intro_response_probabilities = np.array(
         [
-            [[0.70, 0.20, 0.10], [0.20, 0.50, 0.30], [0.10, 0.20, 0.70]],
-            [[0.70, 0.20, 0.10], [0.10, 0.20, 0.70], [0.20, 0.50, 0.30]],
-            [[0.10, 0.20, 0.70], [0.20, 0.50, 0.30], [0.70, 0.20, 0.10]],
+            [[0.70, 0.25, 0.05], [0.25, 0.55, 0.20], [0.05, 0.25, 0.70]],
+            [[0.40, 0.20, 0.40], [0.30, 0.20, 0.50], [0.20, 0.30, 0.50]],
+            [[0.50, 0.30, 0.20], [0.20, 0.20, 0.60], [0.40, 0.50, 0.10]],
         ]
     )
-    return intro_directions, intro_response_probabilities, intro_responses
+    intro_worked_responses = ("high", "high", "low")
+    intro_worked_factors = np.array(
+        [
+            intro_response_probabilities[_neuron, :, intro_responses.index(_response)]
+            for _neuron, _response in enumerate(intro_worked_responses)
+        ]
+    )
+    intro_worked_likelihood = intro_worked_factors.prod(axis=0)
+
+    def intro_number(value):
+        """Show the exact decimal products used in this discrete example."""
+        return f"{value:.4f}".rstrip("0").rstrip(".")
+
+    def intro_draw_table(axis, neuron, response):
+        table = intro_response_probabilities[neuron]
+        selected = intro_responses.index(response)
+        color = intro_neuron_colors[neuron]
+        axis.imshow(table, cmap="Blues", vmin=0, vmax=0.75, aspect="auto")
+        for row in range(3):
+            for column in range(3):
+                axis.text(
+                    column, row, f"{table[row, column]:.2f}",
+                    ha="center", va="center", fontsize=10,
+                    color="white" if table[row, column] > 0.48 else "#182338",
+                    fontweight="bold" if column == selected else "normal",
+                )
+        axis.add_patch(
+            Rectangle(
+                (selected - 0.47, -0.47), 0.94, 2.94, fill=False,
+                edgecolor=color, linewidth=3,
+            )
+        )
+        axis.set_xticks(range(3), [label.capitalize() for label in intro_responses])
+        axis.set_yticks(range(3), [label.capitalize() for label in intro_directions])
+        axis.set_title(f"Neuron {neuron + 1}: observed {response}", color=color, fontsize=11)
+        axis.tick_params(length=0, labelsize=9)
+        for spine in axis.spines.values():
+            spine.set_visible(False)
+
+    return (
+        intro_directions,
+        intro_draw_table,
+        intro_neuron_colors,
+        intro_number,
+        intro_response_probabilities,
+        intro_responses,
+        intro_worked_factors,
+        intro_worked_likelihood,
+        intro_worked_responses,
+    )
 
 
 @app.cell(hide_code=True)
@@ -251,87 +290,31 @@ def _(intro_directions, intro_response_probabilities, mo):
             _probabilities = intro_response_probabilities[_neuron, _direction_index]
             _rows.append(
                 f"| Neuron {_neuron + 1} | {_direction.capitalize()} | "
-                + " | ".join(f"{_value:.2f}" for _value in _probabilities)
-                + " |"
+                + " | ".join(f"{_value:.2f}" for _value in _probabilities) + " |"
             )
     mo.vstack(
         [
             mo.md(
-                "| Recorded neuron | Stimulus shown | P(low) | P(medium) | P(high) |\n"
+                "| Neuron | Direction shown | P(low) | P(medium) | P(high) |\n"
                 "|---|---|---:|---:|---:|\n" + "\n".join(_rows)
             ),
             mo.md(r"""
-            For example, find **neuron 1, rightward**. The entries are 0.10,
-            0.20, and 0.70. If we show rightward motion on 100 trials, we
-            expect roughly 10 low responses, 20 medium responses, and
-            70 high responses from neuron 1. These are expected frequencies;
-            the actual numbers will vary from one set of trials to another.
+            **Read one row.** For neuron 1 under rightward motion, the
+            probabilities are 0.05, 0.25, and 0.70. On 100 rightward trials
+            we would expect about 5 low, 25 medium, and 70 high responses.
+            The actual counts would vary, but these are their expected
+            proportions. The row adds to one because every response falls
+            into exactly one of the three categories.
 
-            **Each row adds to one**, because low, medium, and high cover
-            all the possible responses of that neuron. The row for neuron 2
-            under rightward motion is different: its probabilities are 0.20,
-            0.50, and 0.30. We need a separate row for each neuron because
-            the neurons respond differently to the same stimulus.
-
-            We can write one table entry as
+            We write its last entry as
             $P(R_1=\text{high}\mid\text{rightward})=0.70$.
-            Here $R_1$ means neuron 1's response, and the vertical bar means
-            **“given that.”** Read this as “the probability that neuron 1
-            responds high, given that we showed rightward motion.”
-            We are still describing how a known stimulus produces responses.
-            """),
-        ],
-        gap=0.6,
-    )
-    return
+            $R_1$ means neuron 1's response, and the vertical bar means
+            **“given that.”** This is the probability of a high response,
+            given that we showed rightward motion.
 
-
-@app.cell(hide_code=True)
-def _(intro_directions, intro_response_probabilities, mo):
-    _one_likelihood = intro_response_probabilities[0, :, 2]
-    _rows = [
-        f"| {_direction.capitalize()} | "
-        f"If motion were {_direction}, how probable would neuron 1's high response be? | "
-        f"{_probability:.2f} |"
-        for _direction, _probability in zip(intro_directions, _one_likelihood)
-    ]
-    mo.vstack(
-        [
-            mo.md(r"""
-            ### 1.2 Observe one neuron: the same probabilities become a likelihood
-
-            Now suppose the direction on a new trial is hidden from us.
-            We look at the recording and find that **neuron 1 gave a high
-            response**. For the moment, set the other two neurons aside.
-
-            The response is now known; the stimulus is what we want to work
-            out. We can try each of the three directions in turn and ask:
-            **if this had been the direction, how probable would the response
-            we actually observed have been?** To answer, look up the high
-            column in neuron 1's three rows.
-            """),
-            mo.md(
-                "| Candidate stimulus | Question about the observed response | Probability |\n"
-                "|---|---|---:|\n" + "\n".join(_rows)
-            ),
-            mo.md(r"""
-            These three numbers, considered as a function of the candidate
-            direction, are the **likelihood** for neuron 1's observed high
-            response. We have not changed the table or calculated a new
-            kind of probability. We have selected the same response, high,
-            under each possible stimulus.
-
-            Notice that the question is **still forward**: “if the motion
-            were rightward, how probable would a high response be?” The value
-            0.70 answers that question. It does **not** say that there is a
-            70% probability that the motion was rightward after seeing high.
-            Those are different questions.
-
-            Rightward has the largest likelihood here: a high response is
-            more probable under rightward motion than under either alternative.
-            Choosing the direction with the largest likelihood is called
-            **maximum-likelihood estimation**. Based on neuron 1 alone,
-            we would therefore estimate rightward.
+            So far we have a **forward model**: start with a direction and
+            describe the responses it can produce. Keep this table in mind;
+            everything that follows is a different way of using its entries.
             """),
         ],
         gap=0.6,
@@ -342,103 +325,302 @@ def _(intro_directions, intro_response_probabilities, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### 1.3 Observe all three neurons: multiply within each candidate stimulus
+    ### 1.2 Hide the stimulus; observe one response
 
-    We actually recorded all three neurons on the same trial. Suppose their
-    responses were **neuron 1: high, neuron 2: high, neuron 3: low**. We now
-    want to ask how probable this **whole response pattern** would be under
-    each direction. One neuron's response is only part of the evidence.
+    On a new trial, we do not know which direction was shown. We inspect
+    neuron 1 and find a **high** response. Leave the other two neurons
+    aside for a moment.
 
-    We need one extra assumption to use multiplication: **when the stimulus
-    is held fixed, the neurons' responses vary independently**. For example,
-    among trials that all show rightward motion, learning neuron 1's response
-    gives us no additional information about what response neuron 2 or
-    neuron 3 will give. This is called *conditional independence*: independence
-    given the stimulus. It is an assumption of this example, not something
-    that is guaranteed just because we recorded different neurons.
+    For each candidate direction, ask: **if that direction had been shown,
+    how probable would this high response have been?** We can answer using
+    the same table. Read down neuron 1's **high** column: 0.05 for leftward,
+    0.20 for upward, and 0.70 for rightward.
 
-    Start with **rightward** motion. From the table, the probabilities of
-    our three observed responses are 0.70 for neuron 1's high, 0.30 for
-    neuron 2's high, and 0.70 for neuron 3's low. Under our independence
-    assumption, the probability of getting **all three together** is
-
-    $$
-    P(R_1=\text{high},R_2=\text{high},R_3=\text{low}\mid\text{rightward})
-    = 0.70 \times 0.30 \times 0.70 = 0.147.
-    $$
-
-    Why multiply? Imagine 1,000 rightward-motion trials. About 700 would
-    give a high response from neuron 1. Of those, about 30%—210 trials—would
-    also give a high response from neuron 2. Of those 210, about 70%—147
-    trials—would also give a low response from neuron 3. Thus about 147 out
-    of 1,000 rightward trials would produce this exact pattern. Independence
-    is what lets us use the same 30% and 70% within those smaller groups.
-
-    Now repeat the calculation for leftward and upward. **Keep the observed
-    pattern high, high, low unchanged.** For each candidate direction, take
-    one probability from each neuron's table and multiply those three
-    numbers.
+    The figure copies that column into a bar plot. The response stays
+    fixed at high; only the candidate direction changes.
     """)
     return
 
 
 @app.cell(hide_code=True)
-def _(intro_directions, intro_response_probabilities, mo, np):
-    _observed = (2, 2, 0)  # High, high, low.
-    _factors = np.array(
-        [intro_response_probabilities[_n, :, _r] for _n, _r in enumerate(_observed)]
+def _(clean_axes, intro_directions, intro_draw_table, intro_worked_factors, mo, plt):
+    _likelihood = intro_worked_factors[0]
+    _fig, (_ax_table, _ax_like) = plt.subplots(
+        1, 2, figsize=(10.4, 3.5), layout="constrained",
+        gridspec_kw={"width_ratios": [1, 1.2]},
     )
-    _joint = _factors.prod(axis=0)
+    _fig.patch.set_facecolor("white")
+    intro_draw_table(_ax_table, 0, "high")
+    _ax_table.set_title("Response model: select the high column", fontsize=11)
+    _ax_table.set_xlabel("Possible response")
+    _bars = _ax_like.barh(
+        [label.capitalize() for label in intro_directions], _likelihood,
+        color=["#b8a4ea", "#b8a4ea", "#7c3aed"], height=0.55,
+    )
+    _ax_like.bar_label(_bars, labels=[f"{value:.2f}" for value in _likelihood], padding=5)
+    _ax_like.invert_yaxis()
+    _ax_like.set(
+        title="Likelihood: compare that same response",
+        xlabel="P(neuron 1 high | candidate direction)", xlim=(0, 0.85),
+    )
+    clean_axes([_ax_like])
+    mo.vstack(
+        [
+            _fig,
+            mo.md(r"""
+            These three values are the **likelihood** for the observed
+            response. A likelihood tells us how well each candidate stimulus
+            accounts for the data we actually recorded. Rightward has the
+            largest value, so it is our **maximum-likelihood estimate**
+            using neuron 1 alone.
+
+            We can write this as
+            $L_1(s)=P(R_1=\text{high}\mid s)$, where $s$ is a candidate
+            direction. This is **still a forward probability**. The value
+            0.70 means “70% of rightward trials produce high,” not “a high
+            response means a 70% chance of rightward.”
+            """),
+        ],
+        gap=0.6,
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 1.3 Use the other two neurons
+
+    Now read the whole recording from that same trial:
+
+    **Neuron 1: high · Neuron 2: high · Neuron 3: low**
+
+    For each direction, we want the probability of **all three responses
+    occurring together**. Suppose that, when the direction is held fixed,
+    the neurons' responses vary independently. Knowing one neuron's
+    response then tells us nothing further about the others' responses.
+    This assumption is called **conditional independence**. It is what
+    allows us to multiply their probabilities.
+
+    Try rightward first. The three entries we need are **0.70**, **0.50**,
+    and **0.40**. To see why we multiply, imagine 1,000 rightward trials:
+    about 700 give a high response from neuron 1; half of those, 350, also
+    give a high response from neuron 2; and 40% of those, 140, also give
+    a low response from neuron 3. Thus the probability of the whole pattern
+    is $0.70\times0.50\times0.40=0.14$.
+
+    Repeat that calculation for each candidate direction, always keeping
+    the observed pattern **high, high, low** fixed.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(intro_directions, intro_number, intro_worked_factors, intro_worked_likelihood, mo):
+    _rows = []
+    for _index, _direction in enumerate(intro_directions):
+        _entries = " | ".join(f"{_value:.2f}" for _value in intro_worked_factors[:, _index])
+        _product = " × ".join(f"{_value:.2f}" for _value in intro_worked_factors[:, _index])
+        _rows.append(
+            f"| {_direction.capitalize()} | {_entries} | "
+            f"{_product} = **{intro_number(intro_worked_likelihood[_index])}** |"
+        )
+    mo.vstack(
+        [
+            mo.md(
+                "| Candidate direction | Neuron 1: high | Neuron 2: high | Neuron 3: low | Whole pattern |\n"
+                "|---|---:|---:|---:|---|\n" + "\n".join(_rows)
+            ),
+            mo.md(r"""
+            These products form the **joint likelihood**: “joint” means
+            that we consider the three responses together. Rightward
+            produces this pattern on 14% of trials, upward on 2%, and
+            leftward on 1%. Rightward is therefore the maximum-likelihood
+            estimate from the whole recording.
+
+            The rule is simple: **for each candidate stimulus, multiply
+            the individual neurons' likelihoods**. If $s$ is that stimulus,
+            then under conditional independence,
+            $L(s)=L_1(s)L_2(s)L_3(s)$.
+            We multiply across a row, because those responses happened
+            together. The directions in different rows are alternative
+            explanations of the trial.
+
+            Notice that 0.01, 0.02, and 0.14 add to 0.17, not one. Each
+            describes the same response pattern under a **different assumed
+            direction**. By contrast, a row in the original response table
+            lists all possible responses under **one fixed direction**, so
+            that row must add to one.
+            """),
+        ],
+        gap=0.6,
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 1.4 How much does the evidence favor rightward over leftward?
+
+    A **likelihood ratio** answers this by dividing the two likelihoods:
+
+    $$
+    \frac{L(\text{rightward})}{L(\text{leftward})}
+    = \frac{0.14}{0.01} = 14.
+    $$
+
+    Read this as: **the observed pattern is 14 times as probable under
+    rightward motion as under leftward motion**. Among 1,000 rightward
+    trials, we expect about 140 copies of this pattern; among 1,000
+    leftward trials, only about 10.
+
+    A ratio of one means the pattern supports those two candidates equally.
+    A ratio above one favors the direction in the numerator; a ratio below
+    one favors the direction in the denominator. This comparison concerns
+    rightward versus leftward; upward still has its own likelihood.
+
+    Does a ratio of 14 mean that the stimulus itself is 14 times as likely
+    to have been rightward? **Only if rightward and leftward were equally
+    likely before the recording.** The optional example below shows why
+    that extra condition matters.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    intro_direction_prior = mo.ui.radio(
+        options=["equally frequent directions", "leftward more frequent"],
+        value="leftward more frequent", inline=True,
+        label="How often each direction is shown before we see the responses",
+    )
+    return (intro_direction_prior,)
+
+
+@app.cell(hide_code=True)
+def _(clean_axes, intro_direction_prior, intro_directions, intro_worked_likelihood, mo, np, plt):
+    _biased = intro_direction_prior.value == "leftward more frequent"
+    _prior = np.array([0.85, 0.10, 0.05]) if _biased else np.full(3, 1 / 3)
+    _weights = intro_worked_likelihood * _prior
+    _posterior = _weights / _weights.sum()
+    _shown = 30000 * _prior
+    _matching = _shown * intro_worked_likelihood
+    _total_matching = _matching.sum()
+    _winner = intro_directions[int(np.argmax(_posterior))]
     _rows = [
-        f"| {_direction.capitalize()} | "
-        + " × ".join(f"{_value:.2f}" for _value in _factors[:, _index])
-        + f" | **{_joint[_index]:.3f}** |"
+        f"| {_direction.capitalize()} | {_shown[_index]:,.0f} ({_prior[_index]:.1%}) | "
+        f"{intro_worked_likelihood[_index]:.0%} | **{_matching[_index]:,.0f}** |"
         for _index, _direction in enumerate(intro_directions)
     ]
-    mo.vstack(
-        [
-            mo.md(
-                "| Candidate stimulus | P(neuron 1 high) × P(neuron 2 high) × P(neuron 3 low) | Joint likelihood |\n"
-                "|---|---|---:|\n" + "\n".join(_rows)
-            ),
-            mo.md(r"""
-            Each product is the probability of the **same observed pattern**
-            under a different possible stimulus. The three products together
-            are the **joint likelihood** for this trial. “Joint” just means
-            that we are considering the three responses together.
+    _explanation = (
+        "Leftward starts **17 times as common** as rightward. The responses "
+        "favor rightward by a factor of **14**, which does not quite overcome "
+        "that starting imbalance. **The likelihood favors rightward, but the "
+        "posterior favors leftward.** The recording has still increased "
+        "rightward's probability from **5% to 40%**."
+        if _biased else
+        "The directions start equally frequent. Rightward produces this "
+        "pattern most often, so **both the likelihood and the posterior "
+        "favor rightward**."
+    )
+    _odds = (
+        r"$\underbrace{14}_{\text{likelihood ratio}}\times"
+        r"\underbrace{\frac{1}{17}}_{\text{prior odds}}"
+        r"=\underbrace{\frac{14}{17}}_{\text{posterior odds}}$"
+        if _biased else
+        r"$\underbrace{14}_{\text{likelihood ratio}}\times"
+        r"\underbrace{1}_{\text{prior odds}}"
+        r"=\underbrace{14}_{\text{posterior odds}}$"
+    )
+    _positions = np.arange(3)
+    _fig, (_ax_like, _ax_post) = plt.subplots(
+        1, 2, figsize=(11.4, 3.8), layout="constrained",
+    )
+    _fig.patch.set_facecolor("white")
+    _bars = _ax_like.barh(
+        _positions, intro_worked_likelihood,
+        color=["#b8a4ea", "#b8a4ea", "#7c3aed"], height=0.55,
+    )
+    _ax_like.bar_label(
+        _bars, labels=[f"{_value:.2f}" for _value in intro_worked_likelihood], padding=5,
+    )
+    _ax_like.set(
+        title="Likelihood favors rightward",
+        xlabel="P(high, high, low | direction)", xlim=(0, 0.22),
+    )
+    _ax_like.set_xticks([0, 0.05, 0.10, 0.15, 0.20])
+    _ax_post.barh(
+        _positions - 0.17, _prior, height=0.30, color="#bac4d2", label="Prior: before recording",
+    )
+    _posterior_bars = _ax_post.barh(
+        _positions + 0.17, _posterior, height=0.30, color="#16846b",
+        label="Posterior: after recording",
+    )
+    _ax_post.bar_label(
+        _posterior_bars, labels=[f"{_value:.1%}" for _value in _posterior], padding=5, fontsize=9,
+    )
+    _ax_post.set(
+        title=f"Posterior favors {_winner}",
+        xlabel="Probability of each direction", xlim=(0, 1.12),
+    )
+    _ax_post.set_xticks([0, 0.25, 0.50, 0.75, 1.00])
+    _ax_post.legend(
+        frameon=False, fontsize=8, loc="upper center",
+        bbox_to_anchor=(0.5, -0.18), ncols=2,
+    )
+    for _axis in (_ax_like, _ax_post):
+        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
+        _axis.set_ylim(2.6, -0.6)
+        _axis.tick_params(labelsize=9)
+    clean_axes([_ax_like, _ax_post])
 
-            Rightward again has the largest likelihood, now 0.147. This means
-            that 14.7% of rightward trials would produce the pattern high,
-            high, low under our model. Upward would produce it on 4.2% of
-            trials, and leftward on 0.1%. Thus the whole observed pattern is
-            best accounted for by rightward motion among our three candidates.
-            Neuron 2's high response by itself favors upward, but the combined
-            evidence from all three neurons favors rightward.
+    mo.accordion(
+        {
+            "Optional · The same evidence can lead to a different conclusion": mo.vstack(
+                [
+                    mo.md(r"""
+                    We still have the same recording: **high, high, low**.
+                    Now ask about the direction **given these responses**.
+                    We need one more piece of information: how often each
+                    direction is shown before we see the recording. These
+                    starting probabilities are the **prior**.
 
-            **This is how individual likelihoods combine.** For a candidate
-            stimulus called $s$, let $L_1(s)$ be the probability of neuron 1's
-            observed response, and similarly define $L_2(s)$ and $L_3(s)$.
-            Under conditional independence,
-
-            $$
-            L_{\mathrm{all\ three}}(s) = L_1(s)\,L_2(s)\,L_3(s).
-            $$
-
-            Multiply **across neurons for the same stimulus**, as we did in
-            each row above. Do not multiply down the candidate-stimulus
-            column: leftward, upward, and rightward are alternative
-            explanations of this one trial.
-
-            The three likelihood values here add to 0.190, not one. Each
-            belongs to a different “if the stimulus were…” question, so
-            they are not a probability distribution over directions.
-            What would add to one is the probability of **all possible
-            response patterns for one fixed direction**: there are
-            $3\times3\times3=27$ patterns, from low, low, low through
-            high, high, high.
-            """),
-        ],
-        gap=0.6,
+                    Start with an experiment in which 85% of trials are
+                    leftward, 10% upward, and 5% rightward. To understand the
+                    result, imagine 30,000 trials. First count how many show
+                    each direction. Then use the likelihood to count how
+                    many produce our observed pattern.
+                    """),
+                    intro_direction_prior,
+                    mo.md(
+                        "| Direction | Trials shown (prior) | Fraction producing this pattern | Expected matching trials |\n"
+                        "|---|---:|---:|---:|\n" + "\n".join(_rows)
+                    ),
+                    mo.md(
+                        f"Among the **{_total_matching:,.0f}** trials that produce "
+                        f"high, high, low, **{_matching[0]:,.0f}** are leftward, "
+                        f"**{_matching[1]:,.0f}** upward, and **{_matching[2]:,.0f}** rightward. "
+                        "Their shares are the **posterior probabilities**—the "
+                        "probabilities of each direction after this recording. "
+                        f"For example, leftward has probability "
+                        f"**{_matching[0]:,.0f}/{_total_matching:,.0f} = {_posterior[0]:.1%}**."
+                    ),
+                    _fig,
+                    mo.callout(mo.md(_explanation), kind="info"),
+                    mo.md(
+                        "We can express the same calculation using **odds**: "
+                        "the probability of rightward divided by that of leftward. "
+                        "Posterior odds equal likelihood ratio × prior odds:\n\n"
+                        + _odds
+                        + "\n\n**Try equal frequencies.** Predict which panel will change, "
+                        "then switch the prior. The response model and the recorded "
+                        "pattern stay fixed."
+                    ),
+                ],
+                gap=0.7,
+            )
+        }
     )
     return
 
@@ -446,41 +628,38 @@ def _(intro_directions, intro_response_probabilities, mo, np):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### 1.4 Try another recorded response pattern
+    ### 1.5 Try a different recording
 
-    The controls start at our worked example: **high, high, low**. Change
-    the observed category for any neuron. The response-probability table
-    above stays the same; you are choosing a different recording to interpret.
-    The table below looks up one probability per neuron for each direction,
-    then multiplies them.
+    Now explore the same response model yourself. The controls start at
+    **high, high, low**, our worked example. Changing a control means
+    choosing a different observed response, not changing the neuron's
+    response probabilities.
 
-    **Read the figure from left to right.** In **A**, each small table belongs
-    to one neuron. The outlined column is the response we observed from that
-    neuron. In **B**, those same three entries become that neuron's likelihood
-    bars, with one bar for each possible direction. Colors connect each
-    outlined column to its bars. In **C**, multiply the three bars for each
-    direction to get the joint likelihood. All the plotted numbers are the
-    probabilities from the tables or their products.
+    Follow the figure from left to right. **A:** select the observed column
+    in each neuron's table. **B:** read those entries as individual
+    likelihoods. **C:** multiply the three values for each direction.
+    The calculation table underneath shows every factor.
 
-    Try keeping neuron 1 at **high**, changing neuron 2 to **low**, and
-    changing neuron 3 to **high**. Neuron 1's evidence stays the same.
-    Does the direction favored by the whole pattern stay the same?
+    **Make a prediction first.** Keep neuron 1 at high, but change neuron 2
+    to **low** and neuron 3 to **high**. Neuron 1 alone still favors
+    rightward. Will the whole recording do so? Check the joint bars and
+    the likelihood ratio below them.
     """)
     return
 
 
 @app.cell(hide_code=True)
-def _(intro_responses, mo):
+def _(intro_responses, intro_worked_responses, mo):
     intro_observed_one = mo.ui.radio(
-        options=list(intro_responses), value="high", inline=True,
+        options=list(intro_responses), value=intro_worked_responses[0], inline=True,
         label="Neuron 1: observed response",
     )
     intro_observed_two = mo.ui.radio(
-        options=list(intro_responses), value="high", inline=True,
+        options=list(intro_responses), value=intro_worked_responses[1], inline=True,
         label="Neuron 2: observed response",
     )
     intro_observed_three = mo.ui.radio(
-        options=list(intro_responses), value="low", inline=True,
+        options=list(intro_responses), value=intro_worked_responses[2], inline=True,
         label="Neuron 3: observed response",
     )
     return intro_observed_one, intro_observed_three, intro_observed_two
@@ -488,9 +667,11 @@ def _(intro_responses, mo):
 
 @app.cell(hide_code=True)
 def _(
-    Rectangle,
     clean_axes,
     intro_directions,
+    intro_draw_table,
+    intro_neuron_colors,
+    intro_number,
     intro_observed_one,
     intro_observed_three,
     intro_observed_two,
@@ -510,72 +691,52 @@ def _(
         ]
     )
     _joint = _factors.prod(axis=0)
-    intro_joint_likelihood = _joint
     _best = np.isclose(_joint, _joint.max(), rtol=1e-10, atol=1e-12)
-    _winners = [
-        _direction for _direction, _wins in zip(intro_directions, _best) if _wins
-    ]
+    _winners = [_direction for _direction, _wins in zip(intro_directions, _best) if _wins]
     _one_winners = [
         _direction for _direction, _value in zip(intro_directions, _factors[0])
         if np.isclose(_value, _factors[0].max())
     ]
+    _ratio = _joint[2] / _joint[0]
+    _comparison = (
+        "The pattern supports rightward and leftward equally."
+        if np.isclose(_ratio, 1) else
+        "The pattern favors rightward over leftward."
+        if _ratio > 1 else
+        "The pattern favors leftward over rightward."
+    )
+    _decision = (
+        f"With all three neurons, **{_winners[0]}** has the largest likelihood."
+        if len(_winners) == 1 else
+        f"With all three neurons, **{' and '.join(_winners)}** tie for the largest likelihood."
+    )
     _rows = []
     for _index, _direction in enumerate(intro_directions):
         _entries = " | ".join(f"{_value:.2f}" for _value in _factors[:, _index])
         _product = " × ".join(f"{_value:.2f}" for _value in _factors[:, _index])
         _rows.append(
             f"| {_direction.capitalize()} | {_entries} | "
-            f"{_product} = **{_joint[_index]:.3f}** |"
+            f"{_product} = **{intro_number(_joint[_index])}** |"
         )
-    _decision = (
-        f"The largest product is **{_joint.max():.3f}**, so the "
-        f"maximum-likelihood estimate from all three neurons is **{_winners[0]}**."
-        if len(_winners) == 1 else
-        f"The largest product is **{_joint.max():.3f}**. "
-        f"**{' and '.join(_winners).capitalize()}** tie for the maximum likelihood."
-    )
-    _fig = plt.figure(figsize=(14.4, 7.8), layout="constrained")
+
+    _fig = plt.figure(figsize=(14.4, 6.8), layout="constrained")
     _fig.patch.set_facecolor("white")
-    _grid = _fig.add_gridspec(3, 3, width_ratios=[1.05, 1.4, 1.4], hspace=0.18, wspace=0.15)
-    _neuron_colors = ("#2563a8", "#d97706", "#16846b")
-    _direction_labels = [_direction.capitalize() for _direction in intro_directions]
+    _grid = _fig.add_gridspec(3, 3, width_ratios=[1.05, 1.4, 1.4], hspace=0.10, wspace=0.15)
     _table_axes = []
-    for _neuron, (_response, _color) in enumerate(zip(_observations, _neuron_colors)):
+    for _neuron, _response in enumerate(_observations):
         _axis = _fig.add_subplot(_grid[_neuron, 0])
+        intro_draw_table(_axis, _neuron, _response)
         _table_axes.append(_axis)
-        _selected = intro_responses.index(_response)
-        _table = intro_response_probabilities[_neuron]
-        _axis.imshow(_table, cmap="Blues", vmin=0, vmax=0.75, aspect="auto")
-        for _row in range(3):
-            for _column in range(3):
-                _axis.text(
-                    _column, _row, f"{_table[_row, _column]:.2f}",
-                    ha="center", va="center", fontsize=10,
-                    color="white" if _table[_row, _column] > 0.48 else "#182338",
-                    fontweight="bold" if _column == _selected else "normal",
-                )
-        _axis.add_patch(
-            Rectangle(
-                (_selected - 0.47, -0.47), 0.94, 2.94, fill=False,
-                edgecolor=_color, linewidth=3,
-            )
-        )
-        _axis.set_xticks(range(3), [str(_response).capitalize() for _response in intro_responses])
-        _axis.set_yticks(range(3), _direction_labels)
-        _axis.set_title(
-            ("A · Response probabilities\n" if _neuron == 0 else "")
-            + f"Neuron {_neuron + 1}: observed {_response}",
-            fontsize=11, color=_color, pad=10,
-        )
-        _axis.tick_params(length=0, labelsize=9)
-        for _spine in _axis.spines.values():
-            _spine.set_visible(False)
+    _table_axes[0].set_title(
+        f"A · Select the observed columns\nNeuron 1: {_observations[0]}",
+        fontsize=11, color=intro_neuron_colors[0],
+    )
     _table_axes[-1].set_xlabel("Possible response", fontsize=10)
 
     _ax_individual = _fig.add_subplot(_grid[:, 1])
     _ax_joint = _fig.add_subplot(_grid[:, 2])
     _positions = np.arange(3)
-    for _neuron, _color in enumerate(_neuron_colors):
+    for _neuron, _color in enumerate(intro_neuron_colors):
         _bars = _ax_individual.barh(
             _positions + (_neuron - 1) * 0.22, _factors[_neuron],
             height=0.19, color=_color,
@@ -587,29 +748,24 @@ def _(
         )
     _ax_individual.set(
         title="B · Individual likelihoods",
-        xlabel="Probability of each observed response",
-        xlim=(0, 0.85),
+        xlabel="Probability of each observed response", xlim=(0, 0.85),
     )
-    _ax_individual.legend(
-        frameon=False, fontsize=9, loc="lower right",
-    )
+    _ax_individual.legend(frameon=False, fontsize=9, loc="lower right")
     _bars = _ax_joint.barh(
-        _positions,
-        _joint,
-        color=["#7c3aed" if _wins else "#b8a4ea" for _wins in _best],
-        height=0.55,
+        _positions, _joint,
+        color=["#7c3aed" if _wins else "#b8a4ea" for _wins in _best], height=0.55,
     )
     _ax_joint.bar_label(
-        _bars, labels=[f"{_value:.3f}" for _value in _joint], padding=6, fontsize=10,
+        _bars, labels=[intro_number(_value) for _value in _joint], padding=6, fontsize=10,
     )
     _ax_joint.set(
-        title="C · Joint likelihood: multiply all three",
-        xlabel="Probability of the whole response pattern",
-        xlim=(0, 0.40),
+        title="C · Multiply to get the joint likelihood",
+        xlabel="Probability of the whole response pattern", xlim=(0, 0.22),
     )
+    _ax_joint.set_xticks([0, 0.05, 0.10, 0.15, 0.20])
     for _axis in (_ax_individual, _ax_joint):
-        _axis.set_yticks(_positions, _direction_labels)
-        _axis.set_ylim(2.65, -0.65)
+        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
+        _axis.set_ylim(2.7, -0.65)
         _axis.tick_params(labelsize=9)
         _axis.xaxis.label.set_size(10)
         _axis.title.set_size(11)
@@ -620,137 +776,25 @@ def _(
             intro_observed_one,
             intro_observed_two,
             intro_observed_three,
+            _fig,
             mo.md(
-                f"| Candidate stimulus | Neuron 1: {_observations[0]} | "
-                f"Neuron 2: {_observations[1]} | Neuron 3: {_observations[2]} | "
-                "Multiply to get the joint likelihood |\n"
+                f"| Candidate direction | Neuron 1: {_observations[0]} | "
+                f"Neuron 2: {_observations[1]} | Neuron 3: {_observations[2]} | Joint likelihood |\n"
                 "|---|---:|---:|---:|---|\n" + "\n".join(_rows)
             ),
-            _fig,
             mo.callout(
                 mo.md(
-                    f"""
-                    With neuron 1 alone, the largest likelihood is for
-                    **{' and '.join(_one_winners)}**. {_decision}
-
-                    Every row asks the same kind of forward question:
-                    if this were the direction, how probable would the
-                    recorded pattern **{', '.join(_observations)}** be?
-                    Panel B shows each neuron's contribution; panel C
-                    shows their product, without rescaling.
-                    """
+                    f"**Neuron 1 alone:** the largest likelihood is for "
+                    f"**{' and '.join(_one_winners)}**. {_decision}\n\n"
+                    f"**Rightward versus leftward:** "
+                    f"{intro_number(_joint[2])} / {intro_number(_joint[0])} "
+                    f"= **{_ratio:.3g}**. {_comparison} "
+                    "This two-direction ratio does not compare either one with upward."
                 ),
                 kind="info",
             ),
         ],
         gap=0.7,
-    )
-    return (intro_joint_likelihood,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    intro_direction_prior = mo.ui.radio(
-        options=["equally frequent directions", "leftward more frequent"],
-        value="equally frequent directions", inline=True,
-        label="How often each direction occurs before seeing the responses",
-    )
-    return (intro_direction_prior,)
-
-
-@app.cell(hide_code=True)
-def _(clean_axes, intro_direction_prior, intro_directions, intro_joint_likelihood, mo, np, plt):
-    _prior = (
-        np.full(3, 1 / 3)
-        if intro_direction_prior.value == "equally frequent directions"
-        else np.array([0.85, 0.10, 0.05])
-    )
-    _weights = intro_joint_likelihood * _prior
-    _posterior = _weights / _weights.sum()
-    _positions = np.arange(3)
-    _fig, (_ax_like, _ax_post) = plt.subplots(1, 2, figsize=(11.4, 3.9), layout="constrained")
-    _fig.patch.set_facecolor("white")
-    _bars = _ax_like.barh(_positions, intro_joint_likelihood, color="#7c3aed", height=0.55)
-    _ax_like.bar_label(
-        _bars, labels=[f"{_value:.3f}" for _value in intro_joint_likelihood], padding=5,
-    )
-    _ax_like.set(
-        title="Same joint likelihood as panel C",
-        xlabel="Probability of the observed response pattern",
-        xlim=(0, 0.40),
-    )
-    _ax_post.barh(
-        _positions - 0.17, _prior, height=0.30, color="#bac4d2", label="Prior: before recording",
-    )
-    _posterior_bars = _ax_post.barh(
-        _positions + 0.17, _posterior, height=0.30, color="#16846b", label="Posterior: after recording",
-    )
-    _ax_post.bar_label(
-        _posterior_bars, labels=[f"{_value:.1%}" for _value in _posterior],
-        padding=5, fontsize=9,
-    )
-    _ax_post.set(
-        title="Probabilities over the three directions",
-        xlabel="Probability of each direction",
-        xlim=(0, 1.16),
-    )
-    _ax_post.set_xticks([0, 0.25, 0.50, 0.75, 1.00])
-    _ax_post.legend(
-        frameon=False, fontsize=8, loc="upper center",
-        bbox_to_anchor=(0.5, -0.18), ncols=2,
-    )
-    for _axis in (_ax_like, _ax_post):
-        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
-        _axis.set_ylim(2.6, -0.6)
-        _axis.tick_params(labelsize=9)
-    clean_axes([_ax_like, _ax_post])
-    _rows = [
-        f"| {_direction.capitalize()} | {intro_joint_likelihood[_index]:.3f} | "
-        f"{_prior[_index]:.1%} | {_weights[_index]:.6f} | {_posterior[_index]:.1%} |"
-        for _index, _direction in enumerate(intro_directions)
-    ]
-    mo.accordion(
-        {
-            "Optional: from likelihood to probabilities over directions": mo.vstack(
-                [
-                    mo.md(r"""
-                    Our likelihood asks how probable the recorded responses
-                    would be **if a particular direction were shown**. We can
-                    also ask a different question: after seeing these
-                    responses, how probable is each direction?
-
-                    To answer, we need to know how often each direction
-                    occurs **before we see the responses**. These starting
-                    probabilities are the **prior**. The control below chooses
-                    either equally frequent directions or a setting where
-                    leftward occurs on 85% of trials, upward on 10%, and
-                    rightward on 5%.
-
-                    For each direction, multiply its joint likelihood by its
-                    prior probability. Then divide each result by the sum of
-                    all three results. The updated probabilities are called
-                    the **posterior**. They add to one because they describe
-                    the three possible directions for this trial.
-
-                    Change the prior while keeping the neuron responses above
-                    fixed. The likelihood on the left stays the same, while
-                    the posterior on the right changes.
-                    """),
-                    intro_direction_prior,
-                    _fig,
-                    mo.md(
-                        "| Direction | Joint likelihood | Prior | Likelihood × prior | Posterior |\n"
-                        "|---|---:|---:|---:|---:|\n" + "\n".join(_rows)
-                    ),
-                    mo.md(
-                        f"To get the posterior column, divide each entry in "
-                        f"**Likelihood × prior** by their sum, **{_weights.sum():.6f}**. "
-                        "The posterior probabilities sum to one before rounding."
-                    ),
-                ],
-                gap=0.7,
-            )
-        }
     )
     return
 
