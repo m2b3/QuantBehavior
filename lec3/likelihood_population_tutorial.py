@@ -21,6 +21,7 @@ def _():
     import marimo as mo
     import matplotlib.pyplot as plt
     import numpy as np
+    from matplotlib.patches import Rectangle
 
     normal = NormalDist()
 
@@ -49,6 +50,7 @@ def _():
 
     return (
         NormalDist,
+        Rectangle,
         circular_delta,
         clean_axes,
         direction_tuning,
@@ -450,7 +452,15 @@ def _(mo):
     the observed category for any neuron. The response-probability table
     above stays the same; you are choosing a different recording to interpret.
     The table below looks up one probability per neuron for each direction,
-    then multiplies them. The bars show those three products directly.
+    then multiplies them.
+
+    **Read the figure from left to right.** In **A**, each small table belongs
+    to one neuron. The outlined column is the response we observed from that
+    neuron. In **B**, those same three entries become that neuron's likelihood
+    bars, with one bar for each possible direction. Colors connect each
+    outlined column to its bars. In **C**, multiply the three bars for each
+    direction to get the joint likelihood. All the plotted numbers are the
+    probabilities from the tables or their products.
 
     Try keeping neuron 1 at **high**, changing neuron 2 to **low**, and
     changing neuron 3 to **high**. Neuron 1's evidence stays the same.
@@ -478,6 +488,7 @@ def _(intro_responses, mo):
 
 @app.cell(hide_code=True)
 def _(
+    Rectangle,
     clean_axes,
     intro_directions,
     intro_observed_one,
@@ -499,6 +510,7 @@ def _(
         ]
     )
     _joint = _factors.prod(axis=0)
+    intro_joint_likelihood = _joint
     _best = np.isclose(_joint, _joint.max(), rtol=1e-10, atol=1e-12)
     _winners = [
         _direction for _direction, _wins in zip(intro_directions, _best) if _wins
@@ -522,24 +534,86 @@ def _(
         f"The largest product is **{_joint.max():.3f}**. "
         f"**{' and '.join(_winners).capitalize()}** tie for the maximum likelihood."
     )
-    _fig, _axis = plt.subplots(figsize=(9, 3.7))
+    _fig = plt.figure(figsize=(14.4, 7.8), layout="constrained")
     _fig.patch.set_facecolor("white")
-    _bars = _axis.barh(
-        [str(_direction).capitalize() for _direction in intro_directions],
+    _grid = _fig.add_gridspec(3, 3, width_ratios=[1.05, 1.4, 1.4], hspace=0.18, wspace=0.15)
+    _neuron_colors = ("#2563a8", "#d97706", "#16846b")
+    _direction_labels = [_direction.capitalize() for _direction in intro_directions]
+    _table_axes = []
+    for _neuron, (_response, _color) in enumerate(zip(_observations, _neuron_colors)):
+        _axis = _fig.add_subplot(_grid[_neuron, 0])
+        _table_axes.append(_axis)
+        _selected = intro_responses.index(_response)
+        _table = intro_response_probabilities[_neuron]
+        _axis.imshow(_table, cmap="Blues", vmin=0, vmax=0.75, aspect="auto")
+        for _row in range(3):
+            for _column in range(3):
+                _axis.text(
+                    _column, _row, f"{_table[_row, _column]:.2f}",
+                    ha="center", va="center", fontsize=10,
+                    color="white" if _table[_row, _column] > 0.48 else "#182338",
+                    fontweight="bold" if _column == _selected else "normal",
+                )
+        _axis.add_patch(
+            Rectangle(
+                (_selected - 0.47, -0.47), 0.94, 2.94, fill=False,
+                edgecolor=_color, linewidth=3,
+            )
+        )
+        _axis.set_xticks(range(3), [str(_response).capitalize() for _response in intro_responses])
+        _axis.set_yticks(range(3), _direction_labels)
+        _axis.set_title(
+            ("A · Response probabilities\n" if _neuron == 0 else "")
+            + f"Neuron {_neuron + 1}: observed {_response}",
+            fontsize=11, color=_color, pad=10,
+        )
+        _axis.tick_params(length=0, labelsize=9)
+        for _spine in _axis.spines.values():
+            _spine.set_visible(False)
+    _table_axes[-1].set_xlabel("Possible response", fontsize=10)
+
+    _ax_individual = _fig.add_subplot(_grid[:, 1])
+    _ax_joint = _fig.add_subplot(_grid[:, 2])
+    _positions = np.arange(3)
+    for _neuron, _color in enumerate(_neuron_colors):
+        _bars = _ax_individual.barh(
+            _positions + (_neuron - 1) * 0.22, _factors[_neuron],
+            height=0.19, color=_color,
+            label=f"Neuron {_neuron + 1}: {_observations[_neuron]}",
+        )
+        _ax_individual.bar_label(
+            _bars, labels=[f"{_value:.2f}" for _value in _factors[_neuron]],
+            padding=4, fontsize=9,
+        )
+    _ax_individual.set(
+        title="B · Individual likelihoods",
+        xlabel="Probability of each observed response",
+        xlim=(0, 0.85),
+    )
+    _ax_individual.legend(
+        frameon=False, fontsize=9, loc="lower right",
+    )
+    _bars = _ax_joint.barh(
+        _positions,
         _joint,
         color=["#7c3aed" if _wins else "#b8a4ea" for _wins in _best],
         height=0.55,
     )
-    _axis.bar_label(_bars, labels=[f"{_value:.3f}" for _value in _joint], padding=6)
-    _axis.invert_yaxis()
-    _axis.set(
-        title=f"Joint likelihood for the observed pattern: {', '.join(_observations)}",
-        xlabel="Probability of this response pattern, given each direction",
-        ylabel="Candidate stimulus",
+    _ax_joint.bar_label(
+        _bars, labels=[f"{_value:.3f}" for _value in _joint], padding=6, fontsize=10,
+    )
+    _ax_joint.set(
+        title="C · Joint likelihood: multiply all three",
+        xlabel="Probability of the whole response pattern",
         xlim=(0, 0.40),
     )
-    clean_axes([_axis])
-    _fig.tight_layout()
+    for _axis in (_ax_individual, _ax_joint):
+        _axis.set_yticks(_positions, _direction_labels)
+        _axis.set_ylim(2.65, -0.65)
+        _axis.tick_params(labelsize=9)
+        _axis.xaxis.label.set_size(10)
+        _axis.title.set_size(11)
+    clean_axes([_ax_individual, _ax_joint])
 
     mo.vstack(
         [
@@ -562,13 +636,121 @@ def _(
                     Every row asks the same kind of forward question:
                     if this were the direction, how probable would the
                     recorded pattern **{', '.join(_observations)}** be?
-                    The bars show those probabilities without rescaling.
+                    Panel B shows each neuron's contribution; panel C
+                    shows their product, without rescaling.
                     """
                 ),
                 kind="info",
             ),
         ],
         gap=0.7,
+    )
+    return (intro_joint_likelihood,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    intro_direction_prior = mo.ui.radio(
+        options=["equally frequent directions", "leftward more frequent"],
+        value="equally frequent directions", inline=True,
+        label="How often each direction occurs before seeing the responses",
+    )
+    return (intro_direction_prior,)
+
+
+@app.cell(hide_code=True)
+def _(clean_axes, intro_direction_prior, intro_directions, intro_joint_likelihood, mo, np, plt):
+    _prior = (
+        np.full(3, 1 / 3)
+        if intro_direction_prior.value == "equally frequent directions"
+        else np.array([0.85, 0.10, 0.05])
+    )
+    _weights = intro_joint_likelihood * _prior
+    _posterior = _weights / _weights.sum()
+    _positions = np.arange(3)
+    _fig, (_ax_like, _ax_post) = plt.subplots(1, 2, figsize=(11.4, 3.9), layout="constrained")
+    _fig.patch.set_facecolor("white")
+    _bars = _ax_like.barh(_positions, intro_joint_likelihood, color="#7c3aed", height=0.55)
+    _ax_like.bar_label(
+        _bars, labels=[f"{_value:.3f}" for _value in intro_joint_likelihood], padding=5,
+    )
+    _ax_like.set(
+        title="Same joint likelihood as panel C",
+        xlabel="Probability of the observed response pattern",
+        xlim=(0, 0.40),
+    )
+    _ax_post.barh(
+        _positions - 0.17, _prior, height=0.30, color="#bac4d2", label="Prior: before recording",
+    )
+    _posterior_bars = _ax_post.barh(
+        _positions + 0.17, _posterior, height=0.30, color="#16846b", label="Posterior: after recording",
+    )
+    _ax_post.bar_label(
+        _posterior_bars, labels=[f"{_value:.1%}" for _value in _posterior],
+        padding=5, fontsize=9,
+    )
+    _ax_post.set(
+        title="Probabilities over the three directions",
+        xlabel="Probability of each direction",
+        xlim=(0, 1.16),
+    )
+    _ax_post.set_xticks([0, 0.25, 0.50, 0.75, 1.00])
+    _ax_post.legend(
+        frameon=False, fontsize=8, loc="upper center",
+        bbox_to_anchor=(0.5, -0.18), ncols=2,
+    )
+    for _axis in (_ax_like, _ax_post):
+        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
+        _axis.set_ylim(2.6, -0.6)
+        _axis.tick_params(labelsize=9)
+    clean_axes([_ax_like, _ax_post])
+    _rows = [
+        f"| {_direction.capitalize()} | {intro_joint_likelihood[_index]:.3f} | "
+        f"{_prior[_index]:.1%} | {_weights[_index]:.6f} | {_posterior[_index]:.1%} |"
+        for _index, _direction in enumerate(intro_directions)
+    ]
+    mo.accordion(
+        {
+            "Optional: from likelihood to probabilities over directions": mo.vstack(
+                [
+                    mo.md(r"""
+                    Our likelihood asks how probable the recorded responses
+                    would be **if a particular direction were shown**. We can
+                    also ask a different question: after seeing these
+                    responses, how probable is each direction?
+
+                    To answer, we need to know how often each direction
+                    occurs **before we see the responses**. These starting
+                    probabilities are the **prior**. The control below chooses
+                    either equally frequent directions or a setting where
+                    leftward occurs on 85% of trials, upward on 10%, and
+                    rightward on 5%.
+
+                    For each direction, multiply its joint likelihood by its
+                    prior probability. Then divide each result by the sum of
+                    all three results. The updated probabilities are called
+                    the **posterior**. They add to one because they describe
+                    the three possible directions for this trial.
+
+                    Change the prior while keeping the neuron responses above
+                    fixed. The likelihood on the left stays the same, while
+                    the posterior on the right changes.
+                    """),
+                    intro_direction_prior,
+                    _fig,
+                    mo.md(
+                        "| Direction | Joint likelihood | Prior | Likelihood × prior | Posterior |\n"
+                        "|---|---:|---:|---:|---:|\n" + "\n".join(_rows)
+                    ),
+                    mo.md(
+                        f"To get the posterior column, divide each entry in "
+                        f"**Likelihood × prior** by their sum, **{_weights.sum():.6f}**. "
+                        "The posterior probabilities sum to one before rounding."
+                    ),
+                ],
+                gap=0.7,
+            )
+        }
     )
     return
 
