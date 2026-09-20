@@ -2,6 +2,8 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "marimo>=0.23.9",
+#     "anywidget>=0.11.0",
+#     "traitlets>=5.14",
 #     "matplotlib>=3.9",
 #     "numpy>=2.1",
 # ]
@@ -214,53 +216,333 @@ def _(mo):
     - **Both tosses are heads:** HH only — 1 out of 4, so $P(H_1\text{ and }H_2)=1/4$.
 
     Here $H_1$ means “heads on toss 1” and $H_2$ means “heads on toss 2.”
-    Each panel below contains the same four outcomes. The colored squares
-    are the ones that satisfy the event named above that panel.
+    In the panel below, click the outcomes that belong to an event.
+    The count and probability update together. Try “First toss H,”
+    “Second toss H,” and “Both H” to check the three counts above.
     """)
     return
 
 
 @app.cell(hide_code=True)
-def _(Rectangle, plt):
-    _outcomes = (("HH", "HT"), ("TH", "TT"))
-    _events = (
-        ("First toss is heads", "#2563a8", lambda row, column: row == 0),
-        ("Second toss is heads", "#d97706", lambda row, column: column == 0),
-        ("Both tosses are heads", "#7c3aed", lambda row, column: row == 0 and column == 0),
-    )
-    _fig, _axes = plt.subplots(1, 3, figsize=(11.7, 3.4), layout="constrained")
-    _fig.patch.set_facecolor("white")
-    for _axis, (_title, _color, _matches) in zip(_axes, _events):
-        _count = 0
-        for _row in range(2):
-            for _column in range(2):
-                _selected = _matches(_row, _column)
-                _count += int(_selected)
-                _axis.add_patch(
-                    Rectangle(
-                        (_column, _row), 1, 1,
-                        facecolor=_color if _selected else "#f1f4f8",
-                        edgecolor="white", linewidth=3,
-                    )
-                )
-                _axis.text(
-                    _column + 0.5, _row + 0.5, _outcomes[_row][_column],
-                    ha="center", va="center", fontsize=18,
-                    color="white" if _selected else "#5f6b7c",
-                    fontweight="bold" if _selected else "normal",
-                )
-        _axis.set(
-            title=f"{_title}\n{_count} of 4 outcomes",
-            xlim=(0, 2), ylim=(2, 0), aspect="equal",
-        )
-        _axis.set_xticks([0.5, 1.5], ["Toss 2: H", "Toss 2: T"])
-        _axis.set_yticks([0.5, 1.5], ["Toss 1: H", "Toss 1: T"])
-        _axis.tick_params(length=0, labelsize=9)
-        _axis.title.set_size(11)
-        for _spine in _axis.spines.values():
-            _spine.set_visible(False)
-    _fig
-    return
+def _():
+    import anywidget
+    import traitlets
+
+    class LikelihoodLab(anywidget.AnyWidget):
+        """Browser graphics with state exposed to Python through marimo.
+
+        Inline assets keep the notebook portable in editable WASM exports.
+        Probability tables come from the Python response model below.
+        """
+
+        kind = traitlets.Unicode().tag(sync=True)
+        probabilities = traitlets.List().tag(sync=True)
+        selected = traitlets.List(traitlets.Int(), default_value=[0]).tag(sync=True)
+        observed = traitlets.List(traitlets.Int(), default_value=[2, 2, 0]).tag(sync=True)
+        stage = traitlets.Int(0).tag(sync=True)
+        direction = traitlets.Int(2).tag(sync=True)
+        prior_odds = traitlets.Float(17.0).tag(sync=True)
+        upward_prior = traitlets.Float(0.1).tag(sync=True)
+        _esm = r"""
+        // Shared browser view for the introductory marimo figures. No external JS libraries.
+        function render({model, el}) {
+          const root = document.createElement('section');
+          root.className = 'll-lab';
+          root.dataset.kind = model.get('kind');
+          el.append(root);
+          const directions = ['Leftward', 'Upward', 'Rightward'];
+          const responses = ['low', 'medium', 'high'];
+          const colors = ['#2563a8', '#bc6500', '#16846b'];
+          const purple = '#7440cb';
+          const num = x => Number(x.toFixed(4)).toString();
+          const pct = x => `${(100 * x).toFixed(1)}%`;
+          const winners = values => directions.filter((_, i) => Math.abs(values[i] - Math.max(...values)) < 1e-10).join(' and ');
+          const factors = obs => model.get('probabilities').map((table, n) => table.map(row => row[obs[n]]));
+          const product = fs => directions.map((_, d) => fs.reduce((p, row) => p * row[d], 1));
+          const set = (key, value) => { model.set(key, value); model.save_changes(); };
+          const button = (text, attrs = '') => `<button type="button" ${attrs}>${text}</button>`;
+          const axis = max => `<div class="ll-axis"><span>0</span><span>${num(max / 2)}</span><span>${num(max)}</span></div>`;
+          function barRows(values, max, color, prefix = '', percent = false) {
+            return `<div class="ll-bars">${values.map((v, d) => `<div class="ll-bar-row" data-direction="${d}">
+              <span>${directions[d]}</span><div class="ll-track"><div class="ll-fill" data-bar="${prefix}${d}" style="width:${v / max * 100}%;background:${color}"></div></div>
+              <strong data-number="${prefix}${d}">${percent ? pct(v) : num(v)}</strong></div>`).join('')}${axis(max)}</div>`;
+          }
+          function updateBars(prefix, values, max, percent = false) {
+            values.forEach((v, d) => {
+              root.querySelector(`[data-bar="${prefix}${d}"]`).style.width = `${v / max * 100}%`;
+              root.querySelector(`[data-number="${prefix}${d}"]`).textContent = percent ? pct(v) : num(v);
+            });
+          }
+          let dispose = () => {};
+          if (model.get('kind') === 'coins') {
+            const outcomes = ['HH', 'HT', 'TH', 'TT'];
+            root.innerHTML = `<div class="ll-kicker">COUNT IT YOURSELF</div><h3>Which outcomes belong to your event?</h3>
+              <p>Click a pair to include or exclude it. Each tile is one equally likely outcome, with probability ¼.</p>
+              <div class="ll-coin-layout"><div class="ll-coin-grid">${outcomes.map((s, i) => button(
+                `<span class="ll-coin-pair"><i>${s[0]}</i><i>${s[1]}</i></span><strong>${s}</strong><small>probability ¼</small>`,
+                `data-outcome="${i}" aria-label="Include ${s} in the event" aria-pressed="false"`)).join('')}</div>
+              <div class="ll-count-card"><span>SELECTED OUTCOMES</span><div class="ll-big" data-count></div><p data-sum></p>
+                <p data-selected></p><div class="ll-count-strip">${outcomes.map((s, i) => `<span data-strip="${i}">${s}</span>`).join('')}</div>
+                <p class="ll-note">You are choosing an event. The four outcome probabilities stay fixed.</p></div></div>
+              <div class="ll-actions">${button('First toss H', 'data-event="0,1"')}${button('Second toss H', 'data-event="0,2"')}
+              ${button('Both H', 'data-event="0"')}${button('All four', 'data-event="0,1,2,3"')}${button('Clear', 'data-event=""')}</div>
+              <p class="ll-status" aria-live="polite" data-coin-status></p>`;
+            function update() {
+              const selected = model.get('selected');
+              for (let i = 0; i < 4; i++) {
+                root.querySelector(`[data-outcome="${i}"]`).setAttribute('aria-pressed', selected.includes(i));
+                root.querySelector(`[data-strip="${i}"]`).classList.toggle('ll-on', selected.includes(i));
+              }
+              root.querySelector('[data-count]').textContent = `${selected.length} / 4`;
+              root.querySelector('[data-sum]').textContent = `Probability = ${num(selected.length / 4)} = ${selected.length * 25}%`;
+              root.querySelector('[data-selected]').textContent = selected.length ? selected.map(i => outcomes[i]).join(' + ') : 'No outcomes selected';
+              root.querySelector('[data-coin-status]').textContent = selected.length
+                ? `${selected.length} selected ${selected.length === 1 ? 'outcome' : 'outcomes'} × ¼ each = ${num(selected.length / 4)}.`
+                : 'An event with no possible outcomes has probability 0.';
+            }
+            root.addEventListener('click', e => {
+              const b = e.target.closest('button');
+              if (!b) return;
+              if (b.hasAttribute('data-event')) set('selected', b.dataset.event ? b.dataset.event.split(',').map(Number) : []);
+              if (b.hasAttribute('data-outcome')) {
+                const i = Number(b.dataset.outcome), old = model.get('selected');
+                set('selected', old.includes(i) ? old.filter(j => j !== i) : [...old, i].sort());
+              }
+            });
+            model.on('change:selected', update); update();
+            dispose = () => model.off('change:selected', update);
+          } else if (model.get('kind') === 'population') {
+            function responseTable(n) {
+              const table = model.get('probabilities')[n];
+              return `<div class="ll-neuron" style="--neuron:${colors[n]}"><h4>Neuron ${n + 1} <span data-response="${n}"></span></h4>
+                <table class="ll-response-table"><caption>Probability of each response, given the direction</caption>
+                <thead><tr><th scope="col">Direction</th>${responses.map((r, c) => `<th scope="col">${button(r, `data-neuron="${n}" data-response-index="${c}" aria-label="Neuron ${n + 1}: observe ${r}"`)}</th>`).join('')}</tr></thead>
+                <tbody>${directions.map((d, row) => `<tr><th scope="row">${d}</th>${table[row].map((p, c) => `<td>${button(p.toFixed(2),
+                  `data-neuron="${n}" data-response-index="${c}" style="--shade:${0.05 + p * .4}" aria-label="Neuron ${n + 1}: observe ${responses[c]}; probability ${p} given ${d.toLowerCase()}"`)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+            }
+            root.innerHTML = `<div class="ll-kicker">A RECORDING → THREE LIKELIHOODS → THEIR PRODUCT</div><h3>Click the response you observed</h3>
+              <p>Click a column heading or a probability in each table. A whole column lights up: it compares the <em>same response</em> under all three directions.</p>
+              <div class="ll-actions">${button('Worked example: high · high · low', 'data-pattern="2,2,0"')}${button('Try: high · low · high', 'data-pattern="2,0,2"')}</div>
+              <div class="ll-pop-grid"><div class="ll-col-head">A · Select the responses</div><div class="ll-col-head">B · Read each likelihood</div><div class="ll-col-head ll-joint-head">C · Multiply for each direction</div>
+              ${[0, 1, 2].map(n => `${responseTable(n)}<div class="ll-individual" style="--neuron:${colors[n]}"><h4 data-like-title="${n}"></h4>${barRows([0, 0, 0], 1, colors[n], `n${n}-`)}<p class="ll-note">P(observed response | direction)</p></div>`).join('')}
+              <div class="ll-joint"><h4>Joint likelihood</h4><p data-pattern-label></p>${barRows([0, 0, 0], .2, purple, 'joint-')}
+                <p class="ll-note">P(all three responses | direction)<br>Axis stays at 0–0.20 as you explore.</p>
+                <div class="ll-ratio"><span>RIGHTWARD ÷ LEFTWARD</span><strong data-ratio></strong><p data-ratio-meaning></p></div></div></div>
+              <div class="ll-calculations" data-calculations></div><p class="ll-status" aria-live="polite" data-pop-status></p>
+              <p class="ll-note">The product assumes independent responses given the direction. The ratio compares rightward with leftward only; upward can still win.</p>`;
+            function update() {
+              const obs = model.get('observed'), fs = factors(obs), joint = product(fs), ratio = joint[2] / joint[0];
+              root.querySelectorAll('[data-response-index]').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.responseIndex) === obs[Number(b.dataset.neuron)]));
+              obs.forEach((r, n) => {
+                root.querySelector(`[data-response="${n}"]`).textContent = `observed ${responses[r]}`;
+                root.querySelector(`[data-like-title="${n}"]`).textContent = `Neuron ${n + 1}: ${responses[r]}`;
+                updateBars(`n${n}-`, fs[n], 1);
+              });
+              updateBars('joint-', joint, .2);
+              root.querySelector('[data-pattern-label]').textContent = obs.map(r => responses[r]).join(' · ');
+              root.querySelector('[data-ratio]').textContent = `${Number(ratio.toPrecision(3))}×`;
+              root.querySelector('[data-ratio-meaning]').textContent = Math.abs(ratio - 1) < 1e-10 ? 'Equal support for these two directions.'
+                : ratio > 1 ? 'This pattern is more probable under rightward.' : 'This pattern is more probable under leftward.';
+              root.querySelector('[data-calculations]').innerHTML = directions.map((d, i) => `<div><strong>${d}</strong><span>${fs.map((f, n) => `<b style="color:${colors[n]}">${num(f[i])}</b>`).join(' × ')} = <b>${num(joint[i])}</b></span></div>`).join('');
+              root.querySelector('[data-pop-status]').textContent = `Neuron 1 alone: ${winners(fs[0])}. All three together: ${winners(joint)}. Largest likelihood wins; these are not posterior probabilities.`;
+            }
+            root.addEventListener('click', e => {
+              const b = e.target.closest('button'); if (!b) return;
+              if (b.hasAttribute('data-pattern')) set('observed', b.dataset.pattern.split(',').map(Number));
+              if (b.hasAttribute('data-response-index')) {
+                const obs = [...model.get('observed')]; obs[Number(b.dataset.neuron)] = Number(b.dataset.responseIndex); set('observed', obs);
+              }
+            });
+            model.on('change:observed', update); update();
+            dispose = () => model.off('change:observed', update);
+          } else if (model.get('kind') === 'multiply') {
+            let timer;
+            const fs = factors([2, 2, 0]);
+            root.innerHTML = `<div class="ll-kicker">WHY MULTIPLY? KEEP A FRACTION OF A FRACTION</div><h3>Follow 1,000 trials through the three responses</h3>
+              <p>Keep the recording fixed at <strong>high · high · low</strong>. Choose a direction, then add one neuron's response at a time.</p>
+              <div class="ll-actions">${directions.map((d, i) => button(d, `data-candidate="${i}" aria-pressed="false"`)).join('')}</div>
+              <div class="ll-stages">${['All trials', 'N1 high', '+ N2 high', '+ N3 low'].map((label, i) => button(`<span>${label}</span><strong data-stage-count="${i}"></strong><small data-stage-factor="${i}"></small>`, `data-stage="${i}" aria-pressed="false"`)).join('')}</div>
+              <div class="ll-dot-layout"><svg class="ll-dots" viewBox="0 0 400 250" role="img" aria-label="Expected matching trials out of 1000">${Array.from({length: 1000}, (_, i) => `<circle cx="${(i % 40) * 10 + 5}" cy="${Math.floor(i / 40) * 10 + 5}" r="3.2" />`).join('')}</svg>
+                <div class="ll-count-card"><span data-stage-caption></span><div class="ll-big" data-stage-fraction></div><p data-stage-product></p><p data-stage-explain></p></div></div>
+              <div class="ll-actions">${button('Start over', 'data-restart')}${button('Next neuron →', 'data-next')}${button('▶ Play steps', 'data-play')}</div>
+              <p class="ll-status" aria-live="polite" data-multiply-status></p>
+              <p class="ll-note">Each dot represents one expected trial. This is a count illustration, not a random simulation. Every step keeps the same denominator of 1,000.</p>`;
+            function stop() { clearTimeout(timer); timer = undefined; root.querySelector('[data-play]').textContent = '▶ Play steps'; }
+            function update() {
+              const d = model.get('direction'), stage = model.get('stage');
+              const counts = [1000]; for (const f of fs) counts.push(counts.at(-1) * f[d]);
+              root.querySelectorAll('[data-candidate]').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.candidate) === d));
+              for (let i = 0; i < 4; i++) {
+                root.querySelector(`[data-stage="${i}"]`).setAttribute('aria-pressed', i === stage);
+                root.querySelector(`[data-stage-count="${i}"]`).textContent = Math.round(counts[i]).toLocaleString();
+                root.querySelector(`[data-stage-factor="${i}"]`).textContent = i ? `× ${num(fs[i - 1][d])} of previous group` : `${directions[d]} trials`;
+              }
+              root.querySelectorAll('circle').forEach((circle, i) => {
+                circle.style.fill = i < Math.round(counts[stage]) ? (stage ? colors[stage - 1] : '#64748b') : '#e5e9ef';
+              });
+              root.querySelector('[data-stage-caption]').textContent = stage === 3 ? 'WHOLE PATTERN' : stage ? `FIRST ${stage} ${stage === 1 ? 'RESPONSE' : 'RESPONSES'}` : 'BEFORE SELECTING RESPONSES';
+              root.querySelector('[data-stage-fraction]').textContent = `${Math.round(counts[stage])} / 1,000`;
+              root.querySelector('[data-stage-product]').textContent = stage ? `${fs.slice(0, stage).map(f => num(f[d])).join(' × ')} = ${num(counts[stage] / 1000)}` : 'Probability = 1';
+              root.querySelector('[data-stage-explain]').textContent = stage ? `Of the ${Math.round(counts[stage - 1])} previous matches, ${num(fs[stage - 1][d] * 100)}% also match neuron ${stage}.` : 'All trials share the same candidate direction.';
+              root.querySelector('[data-next]').disabled = stage === 3;
+              root.querySelector('[data-multiply-status]').textContent = stage === 3 ? `Under ${directions[d].toLowerCase()}, the whole pattern occurs on ${num(counts[3] / 10)}% of trials: joint likelihood ${num(counts[3] / 1000)}.` : `Step ${stage} of 3. Add the next response to see which trials remain.`;
+            }
+            root.addEventListener('click', e => {
+              const b = e.target.closest('button'); if (!b) return;
+              if (b.hasAttribute('data-play')) {
+                if (timer) { stop(); return; }
+                set('stage', 0); b.textContent = 'Pause';
+                const advance = () => { const next = model.get('stage') + 1; set('stage', next); if (next < 3) timer = setTimeout(advance, 1100); else stop(); };
+                timer = setTimeout(advance, 1100); return;
+              }
+              stop();
+              if (b.hasAttribute('data-candidate')) set('direction', Number(b.dataset.candidate));
+              if (b.hasAttribute('data-stage')) set('stage', Number(b.dataset.stage));
+              if (b.hasAttribute('data-restart')) set('stage', 0);
+              if (b.hasAttribute('data-next')) set('stage', Math.min(3, model.get('stage') + 1));
+            });
+            model.on('change:stage', update); model.on('change:direction', update); update();
+            dispose = () => { stop(); model.off('change:stage', update); model.off('change:direction', update); };
+          } else if (model.get('kind') === 'prior') {
+            const likelihood = product(factors([2, 2, 0]));
+            root.innerHTML = `<div class="ll-kicker">OPTIONAL · SAME RECORDING, DIFFERENT STARTING FREQUENCIES</div><h3>Can the prior overturn the likelihood?</h3>
+              <p>The recording stays <strong>high · high · low</strong>. Move the slider to change how often each direction was shown <em>before</em> that recording.</p>
+              <label class="ll-slider-label"><span>Leftward is <strong data-prior-odds></strong> as frequent as rightward</span>
+                <input type="range" min="1" max="35" step="0.5" aria-label="Prior odds of leftward versus rightward" /></label>
+              <div class="ll-slider-ends"><span>1× · equally frequent left/right</span><span>35× · leftward much more frequent</span></div>
+              <div class="ll-actions">${button('Equal frequencies: all three', 'data-equal')}${button('Original prior: 85% / 10% / 5%', 'data-original')}</div>
+              <p class="ll-note" data-upward-fixed></p>
+              <div class="ll-prior-panels"><div><h4>1 · Prior <span>changes</span></h4>${barRows([0, 0, 0], 1, '#64748b', 'prior-', true)}<p class="ll-note">Probability before the recording</p></div>
+              <div class="ll-fixed"><h4>2 · Likelihood <span>stays fixed</span></h4>${barRows(likelihood, .2, purple, 'fixed-')}<p class="ll-note">P(high, high, low | direction)<br>Rightward / leftward = 14</p></div>
+              <div><h4>3 · Posterior <span>changes</span></h4>${barRows([0, 0, 0], 1, '#16846b', 'posterior-', true)}<p class="ll-note">Probability after the recording</p></div></div>
+              <p class="ll-status" aria-live="polite" data-prior-status></p>
+              <details class="ll-count-details"><summary>See the same calculation by counting 30,000 trials</summary><div data-prior-counts></div></details>
+              <p data-posterior-odds></p><p class="ll-note">Try 14× on the slider: the prior advantage for leftward exactly balances the 14-fold likelihood advantage for rightward.</p>`;
+            function update() {
+              const odds = model.get('prior_odds'), upward = model.get('upward_prior');
+              const prior = [(1 - upward) * odds / (1 + odds), upward, (1 - upward) / (1 + odds)];
+              const weights = prior.map((p, d) => p * likelihood[d]), total = weights.reduce((a, b) => a + b, 0), posterior = weights.map(p => p / total);
+              root.querySelector('input').value = odds;
+              root.querySelector('[data-prior-odds]').textContent = `${num(odds)}×`;
+              root.querySelector('[data-upward-fixed]').textContent = `Upward stays at ${pct(upward)}. The slider splits the remaining ${pct(1 - upward)} between leftward and rightward.`;
+              updateBars('prior-', prior, 1, true); updateBars('posterior-', posterior, 1, true);
+              root.querySelector('[data-prior-status]').textContent = `Likelihood favors Rightward. Posterior: ${winners(posterior)} ${winners(posterior).includes(' and ') ? 'tie' : 'has the highest probability'}. Rightward moves from ${pct(prior[2])} before the recording to ${pct(posterior[2])} after it.`;
+              root.querySelector('[data-posterior-odds]').textContent = `Posterior odds (rightward : leftward) = likelihood ratio × prior odds = 14 × (1 / ${num(odds)}) = ${num(14 / odds)}.`;
+              root.querySelector('[data-prior-counts]').innerHTML = `<table><thead><tr><th>Direction</th><th>Trials shown</th><th>× likelihood</th><th>Expected matches</th><th>Share of matches</th></tr></thead><tbody>${directions.map((d, i) => `<tr><th>${d}</th><td>${(prior[i] * 30000).toLocaleString(undefined, {maximumFractionDigits: 1})}</td><td>${num(likelihood[i])}</td><td>${(weights[i] * 30000).toLocaleString(undefined, {maximumFractionDigits: 1})}</td><td>${pct(posterior[i])}</td></tr>`).join('')}</tbody></table><p>Divide each expected match count by the total, ${(total * 30000).toLocaleString(undefined, {maximumFractionDigits: 1})}, to get its posterior probability. Counts are rounded for display.</p>`;
+            }
+            root.querySelector('input').addEventListener('input', e => set('prior_odds', Number(e.target.value)));
+            root.addEventListener('click', e => {
+              const b = e.target.closest('button'); if (!b) return;
+              if (b.hasAttribute('data-equal')) { set('upward_prior', 1 / 3); set('prior_odds', 1); }
+              if (b.hasAttribute('data-original')) { set('upward_prior', .1); set('prior_odds', 17); }
+            });
+            model.on('change:prior_odds', update); model.on('change:upward_prior', update); update();
+            dispose = () => { model.off('change:prior_odds', update); model.off('change:upward_prior', update); };
+          }
+          return () => { dispose(); root.remove(); };
+        }
+        export default {render};
+        """
+        _css = r"""
+        .ll-lab { --ll-ink:#182338; --ll-muted:#58677b; color:var(--ll-ink); background:#fff; border:1px solid #dce3ec; border-radius:18px; padding:clamp(16px,2.5vw,32px); margin:12px 0; font:15px/1.55 system-ui,sans-serif; box-shadow:0 8px 28px #18233809; container-type:inline-size; }
+        .ll-lab * { box-sizing:border-box; }
+        .ll-lab h3 { font:700 clamp(22px,2.3vw,29px)/1.2 Georgia,serif; margin:6px 0 12px; color:var(--ll-ink); }
+        .ll-lab h4 { font-size:15px; line-height:1.45; margin:0 0 14px; color:var(--ll-ink); }
+        .ll-lab p { margin:8px 0 14px; }
+        .ll-lab strong,.ll-lab b { font-weight:700; }
+        .ll-lab .ll-kicker { color:#7440cb; font-size:11px; letter-spacing:.13em; font-weight:750; }
+        .ll-lab .ll-note { color:var(--ll-muted); font-size:12px; line-height:1.5; }
+        .ll-lab button { appearance:none; font:inherit; color:var(--ll-ink); background:white; border:1px solid #cbd5e1; border-radius:8px; padding:8px 12px; cursor:pointer; touch-action:manipulation; transition:background .15s,border-color .15s; }
+        .ll-lab button:hover { background:#f0ecfb; border-color:#7440cb; }
+        .ll-lab button[aria-pressed=true] { background:#eee6fc; border-color:#7440cb; color:#512592; box-shadow:inset 0 0 0 1px #7440cb; }
+        .ll-lab button:focus-visible,.ll-lab input:focus-visible,.ll-lab summary:focus-visible { outline:3px solid #d97706; outline-offset:3px; }
+        .ll-lab button:disabled { opacity:.4; cursor:default; }
+        .ll-lab .ll-actions { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+        .ll-lab .ll-actions button { font-size:13px; }
+        .ll-lab .ll-status { background:#f3effc; border-left:4px solid #7440cb; padding:12px 16px; border-radius:0 8px 8px 0; font-size:14px; }
+        .ll-lab .ll-coin-layout,.ll-lab .ll-dot-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:center; margin:24px 0; }
+        .ll-lab .ll-coin-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .ll-lab .ll-coin-grid button { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px; background:#f8fafc; border:2px solid #dce3ec; }
+        .ll-lab .ll-coin-grid button[aria-pressed=true] { background:#f1eafa; border-color:#7440cb; }
+        .ll-lab .ll-coin-pair { display:flex; gap:10px; }
+        .ll-lab .ll-coin-pair i { display:grid; place-items:center; width:46px; height:46px; border-radius:50%; background:#f4dfad; border:3px double #bb862a; color:#70491a; font:bold 21px Georgia,serif; }
+        .ll-lab .ll-coin-grid small { font-size:12px; color:var(--ll-muted); }
+        .ll-lab .ll-count-card { background:#f8f6fc; border-radius:12px; padding:24px; }
+        .ll-lab .ll-count-card>span,.ll-lab .ll-ratio>span { font-size:11px; letter-spacing:.08em; color:var(--ll-muted); font-weight:700; }
+        .ll-lab .ll-big { font:700 clamp(28px,4vw,52px)/1.2 Georgia,serif; margin:12px 0; color:#7440cb; }
+        .ll-lab .ll-count-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+        .ll-lab .ll-count-strip span { text-align:center; padding:12px 0; background:#e8eaf0; color:#596579; font-size:12px; border-radius:4px; }
+        .ll-lab .ll-count-strip .ll-on { background:#7440cb; color:white; }
+        .ll-lab .ll-pop-grid { display:grid; grid-template-columns:minmax(255px,1fr) minmax(260px,1fr) minmax(260px,1fr); gap:16px 22px; }
+        .ll-lab .ll-col-head { font-size:12px; font-weight:750; color:var(--ll-muted); }
+        .ll-lab .ll-neuron { grid-column:1; border-top:3px solid var(--neuron); padding-top:12px; }
+        .ll-lab .ll-neuron h4 { color:var(--neuron); margin-bottom:8px; }
+        .ll-lab .ll-neuron h4 span { float:right; font-size:12px; font-weight:500; }
+        .ll-lab .ll-response-table { border-collapse:separate; border-spacing:3px; width:100%; font-size:12px; table-layout:fixed; }
+        .ll-lab .ll-response-table caption { font-size:11px; color:var(--ll-muted); text-align:left; margin:0 0 6px; }
+        .ll-lab .ll-response-table th,.ll-lab .ll-response-table td { padding:0 !important; border:0; text-align:center; }
+        .ll-lab .ll-response-table th:first-child { width:28%; text-align:left; font-weight:500; }
+        .ll-lab .ll-response-table button { width:100%; border:1px solid transparent; border-radius:5px; padding:7px 2px; font-size:12px; background:rgba(37,99,168,var(--shade,0)); font-variant-numeric:tabular-nums; }
+        .ll-lab .ll-response-table button[aria-pressed=true] { border-color:var(--neuron); box-shadow:inset 0 0 0 1px var(--neuron); color:var(--ll-ink); font-weight:750; }
+        .ll-lab .ll-response-table thead button[aria-pressed=true] { background:var(--neuron); color:white; }
+        .ll-lab .ll-individual { grid-column:2; border-top:3px solid var(--neuron); padding-top:12px; }
+        .ll-lab .ll-joint { grid-column:3; grid-row:2 / span 3; background:#f8f6fc; border:1px solid #e8e1f4; border-radius:12px; padding:18px 14px; }
+        .ll-lab .ll-joint .ll-bar-row { margin-bottom:25px; }
+        .ll-lab .ll-bars { width:100%; margin:16px 0 6px; }
+        .ll-lab .ll-bar-row { display:grid; grid-template-columns:65px minmax(0,1fr) 48px; gap:8px; align-items:center; margin-bottom:13px; font-size:12px; font-variant-numeric:tabular-nums; }
+        .ll-lab .ll-track { height:17px; background:#e8edf3; border-radius:3px; overflow:hidden; }
+        .ll-lab .ll-fill { height:100%; border-radius:3px; transition:width .35s ease; }
+        .ll-lab .ll-axis { display:flex; justify-content:space-between; border-top:1px solid #c9d2df; padding-top:4px; margin:0 56px 0 73px; color:var(--ll-muted); font-size:10px; }
+        .ll-lab .ll-ratio { border-top:1px solid #daceed; margin-top:32px; padding-top:24px; }
+        .ll-lab .ll-ratio strong { display:block; font:700 44px Georgia,serif; color:#7440cb; margin:10px 0; }
+        .ll-lab .ll-ratio p { font-size:13px; }
+        .ll-lab .ll-calculations { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:20px 0; font-size:13px; }
+        .ll-lab .ll-calculations>div { border:1px solid #dce3ec; border-radius:8px; padding:10px 12px; }
+        .ll-lab .ll-calculations strong { display:block; margin-bottom:6px; }
+        .ll-lab .ll-stages { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+        .ll-lab .ll-stages button { text-align:left; padding:12px; }
+        .ll-lab .ll-stages span,.ll-lab .ll-stages strong,.ll-lab .ll-stages small { display:block; }
+        .ll-lab .ll-stages strong { font-size:26px; }
+        .ll-lab .ll-stages small { font-size:11px; color:var(--ll-muted); }
+        .ll-lab .ll-dots { width:100%; height:auto; display:block; }
+        .ll-lab circle { transition:fill .4s ease; }
+        .ll-lab .ll-slider-label { display:block; padding:16px 18px; border-radius:10px; background:#f8f6fc; }
+        .ll-lab .ll-slider-label input { display:block; width:100%; accent-color:#7440cb; margin:18px 0 4px; cursor:pointer; }
+        .ll-lab .ll-slider-ends { display:flex; justify-content:space-between; gap:16px; font-size:11px; color:var(--ll-muted); padding:4px 18px; }
+        .ll-lab .ll-prior-panels { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0; }
+        .ll-lab .ll-prior-panels>div { padding:16px 12px; border:1px solid #dce3ec; border-radius:10px; }
+        .ll-lab .ll-prior-panels h4 span { display:block; font-size:11px; color:var(--ll-muted); font-weight:500; }
+        .ll-lab .ll-fixed { background:#f8f6fc; }
+        .ll-lab .ll-count-details { margin:16px 0; border-top:1px solid #dce3ec; padding-top:14px; font-size:13px; }
+        .ll-lab .ll-count-details summary { cursor:pointer; font-weight:650; }
+        .ll-lab .ll-count-details>div { overflow-x:auto; }
+        .ll-lab .ll-count-details table { font-size:12px; width:100%; text-align:left; border-collapse:collapse; }
+        .ll-lab .ll-count-details th,.ll-lab .ll-count-details td { border-bottom:1px solid #dce3ec; }
+        @container (max-width:900px) {
+          .ll-lab .ll-pop-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+          .ll-lab .ll-joint-head { display:none; }
+          .ll-lab .ll-joint { grid-column:1 / -1; grid-row:auto; }
+          .ll-lab .ll-prior-panels { grid-template-columns:1fr; }
+        }
+        @container (max-width:560px) {
+          .ll-lab .ll-coin-layout,.ll-lab .ll-dot-layout,.ll-lab .ll-pop-grid,.ll-lab .ll-calculations { grid-template-columns:minmax(0,1fr); }
+          .ll-lab .ll-individual,.ll-lab .ll-neuron,.ll-lab .ll-joint { grid-column:1; }
+          .ll-lab .ll-col-head { display:none; }
+          .ll-lab .ll-stages { grid-template-columns:1fr 1fr; }
+          .ll-lab .ll-count-card { padding:18px; }
+          .ll-lab .ll-coin-grid button { padding:12px; }
+        }
+        @media (prefers-reduced-motion:reduce) { .ll-lab * { transition:none !important; } }
+        """
+
+    return (LikelihoodLab,)
+
+
+@app.cell(hide_code=True)
+def _(LikelihoodLab, mo):
+    coin_counter = mo.ui.anywidget(LikelihoodLab(kind="coins"))
+    coin_counter
+    return (coin_counter,)
 
 
 @app.cell(hide_code=True)
@@ -581,6 +863,15 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
+def _(LikelihoodLab, intro_response_probabilities, mo):
+    intro_multiplication = mo.ui.anywidget(
+        LikelihoodLab(kind="multiply", probabilities=intro_response_probabilities.tolist())
+    )
+    intro_multiplication
+    return (intro_multiplication,)
+
+
+@app.cell(hide_code=True)
 def _(intro_directions, intro_number, intro_worked_factors, intro_worked_likelihood, mo):
     _rows = []
     for _index, _direction in enumerate(intro_directions):
@@ -654,140 +945,37 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(mo):
-    intro_direction_prior = mo.ui.radio(
-        options=["equally frequent directions", "leftward more frequent"],
-        value="leftward more frequent", inline=True,
-        label="How often each direction is shown before we see the responses",
+def _(LikelihoodLab, intro_response_probabilities, mo):
+    intro_prior_explorer = mo.ui.anywidget(
+        LikelihoodLab(kind="prior", probabilities=intro_response_probabilities.tolist())
     )
-    return (intro_direction_prior,)
-
-
-@app.cell(hide_code=True)
-def _(clean_axes, intro_direction_prior, intro_directions, intro_worked_likelihood, mo, np, plt):
-    _biased = intro_direction_prior.value == "leftward more frequent"
-    _prior = np.array([0.85, 0.10, 0.05]) if _biased else np.full(3, 1 / 3)
-    _weights = intro_worked_likelihood * _prior
-    _posterior = _weights / _weights.sum()
-    _shown = 30000 * _prior
-    _matching = _shown * intro_worked_likelihood
-    _total_matching = _matching.sum()
-    _winner = intro_directions[int(np.argmax(_posterior))]
-    _rows = [
-        f"| {_direction.capitalize()} | {_shown[_index]:,.0f} ({_prior[_index]:.1%}) | "
-        f"{intro_worked_likelihood[_index]:.0%} | **{_matching[_index]:,.0f}** |"
-        for _index, _direction in enumerate(intro_directions)
-    ]
-    _explanation = (
-        "Leftward starts **17 times as common** as rightward. The responses "
-        "favor rightward by a factor of **14**, which does not quite overcome "
-        "that starting imbalance. **The likelihood favors rightward, but the "
-        "posterior favors leftward.** The recording has still increased "
-        "rightward's probability from **5% to 40%**."
-        if _biased else
-        "The directions start equally frequent. Rightward produces this "
-        "pattern most often, so **both the likelihood and the posterior "
-        "favor rightward**."
-    )
-    _odds = (
-        r"$\underbrace{14}_{\text{likelihood ratio}}\times"
-        r"\underbrace{\frac{1}{17}}_{\text{prior odds}}"
-        r"=\underbrace{\frac{14}{17}}_{\text{posterior odds}}$"
-        if _biased else
-        r"$\underbrace{14}_{\text{likelihood ratio}}\times"
-        r"\underbrace{1}_{\text{prior odds}}"
-        r"=\underbrace{14}_{\text{posterior odds}}$"
-    )
-    _positions = np.arange(3)
-    _fig, (_ax_like, _ax_post) = plt.subplots(
-        1, 2, figsize=(11.4, 3.8), layout="constrained",
-    )
-    _fig.patch.set_facecolor("white")
-    _bars = _ax_like.barh(
-        _positions, intro_worked_likelihood,
-        color=["#b8a4ea", "#b8a4ea", "#7c3aed"], height=0.55,
-    )
-    _ax_like.bar_label(
-        _bars, labels=[f"{_value:.2f}" for _value in intro_worked_likelihood], padding=5,
-    )
-    _ax_like.set(
-        title="Likelihood favors rightward",
-        xlabel="P(high, high, low | direction)", xlim=(0, 0.22),
-    )
-    _ax_like.set_xticks([0, 0.05, 0.10, 0.15, 0.20])
-    _ax_post.barh(
-        _positions - 0.17, _prior, height=0.30, color="#bac4d2", label="Prior: before recording",
-    )
-    _posterior_bars = _ax_post.barh(
-        _positions + 0.17, _posterior, height=0.30, color="#16846b",
-        label="Posterior: after recording",
-    )
-    _ax_post.bar_label(
-        _posterior_bars, labels=[f"{_value:.1%}" for _value in _posterior], padding=5, fontsize=9,
-    )
-    _ax_post.set(
-        title=f"Posterior favors {_winner}",
-        xlabel="Probability of each direction", xlim=(0, 1.12),
-    )
-    _ax_post.set_xticks([0, 0.25, 0.50, 0.75, 1.00])
-    _ax_post.legend(
-        frameon=False, fontsize=8, loc="upper center",
-        bbox_to_anchor=(0.5, -0.18), ncols=2,
-    )
-    for _axis in (_ax_like, _ax_post):
-        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
-        _axis.set_ylim(2.6, -0.6)
-        _axis.tick_params(labelsize=9)
-    clean_axes([_ax_like, _ax_post])
-
     mo.accordion(
         {
             "Optional · The same evidence can lead to a different conclusion": mo.vstack(
                 [
                     mo.md(r"""
-                    We still have the same recording: **high, high, low**.
-                    Now ask about the direction **given these responses**.
-                    We need one more piece of information: how often each
-                    direction is shown before we see the recording. These
-                    starting probabilities are the **prior**.
+                    The **prior** describes how often each direction is shown
+                    before we see a response. The **posterior** describes how
+                    probable each direction is after our recording.
 
-                    Start with an experiment in which 85% of trials are
-                    leftward, 10% upward, and 5% rightward. To understand the
-                    result, imagine 30,000 trials. First count how many show
-                    each direction. Then use the likelihood to count how
-                    many produce our observed pattern.
+                    Start with 85% leftward, 10% upward, and 5% rightward.
+                    Leftward is initially **17 times as common** as rightward.
+                    Our responses favor rightward by a factor of **14**, which
+                    does not quite overcome that starting imbalance. The
+                    likelihood favors rightward, but the posterior favors
+                    leftward. Rightward still rises from **5% to 40%**.
+
+                    Predict which panels will change, then move the slider.
+                    Open the count calculation if you want to see how the
+                    posterior comes from counting matching trials.
                     """),
-                    intro_direction_prior,
-                    mo.md(
-                        "| Direction | Trials shown (prior) | Fraction producing this pattern | Expected matching trials |\n"
-                        "|---|---:|---:|---:|\n" + "\n".join(_rows)
-                    ),
-                    mo.md(
-                        f"Among the **{_total_matching:,.0f}** trials that produce "
-                        f"high, high, low, **{_matching[0]:,.0f}** are leftward, "
-                        f"**{_matching[1]:,.0f}** upward, and **{_matching[2]:,.0f}** rightward. "
-                        "Their shares are the **posterior probabilities**—the "
-                        "probabilities of each direction after this recording. "
-                        f"For example, leftward has probability "
-                        f"**{_matching[0]:,.0f}/{_total_matching:,.0f} = {_posterior[0]:.1%}**."
-                    ),
-                    _fig,
-                    mo.callout(mo.md(_explanation), kind="info"),
-                    mo.md(
-                        "We can express the same calculation using **odds**: "
-                        "the probability of rightward divided by that of leftward. "
-                        "Posterior odds equal likelihood ratio × prior odds:\n\n"
-                        + _odds
-                        + "\n\n**Try equal frequencies.** Predict which panel will change, "
-                        "then switch the prior. The response model and the recorded "
-                        "pattern stay fixed."
-                    ),
+                    intro_prior_explorer,
                 ],
                 gap=0.7,
             )
         }
     )
-    return
+    return (intro_prior_explorer,)
 
 
 @app.cell(hide_code=True)
@@ -795,15 +983,15 @@ def _(mo):
     mo.md(r"""
     ### 1.5 Try a different recording
 
-    Now explore the same response model yourself. The controls start at
-    **high, high, low**, our worked example. Changing a control means
-    choosing a different observed response, not changing the neuron's
-    response probabilities.
+    Now explore the same response model yourself. The highlighted columns
+    start at **high, high, low**, our worked example. Click directly in a
+    table to choose a different observed response. The neuron's response
+    probabilities stay fixed.
 
     Follow the figure from left to right. **A:** select the observed column
     in each neuron's table. **B:** read those entries as individual
     likelihoods. **C:** multiply the three values for each direction.
-    The calculation table underneath shows every factor.
+    The calculations underneath show every factor.
 
     **Make a prediction first.** Keep neuron 1 at high, but change neuron 2
     to **low** and neuron 3 to **high**. Neuron 1 alone still favors
@@ -814,154 +1002,12 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(intro_responses, intro_worked_responses, mo):
-    intro_observed_one = mo.ui.radio(
-        options=list(intro_responses), value=intro_worked_responses[0], inline=True,
-        label="Neuron 1: observed response",
+def _(LikelihoodLab, intro_response_probabilities, mo):
+    intro_explorer = mo.ui.anywidget(
+        LikelihoodLab(kind="population", probabilities=intro_response_probabilities.tolist())
     )
-    intro_observed_two = mo.ui.radio(
-        options=list(intro_responses), value=intro_worked_responses[1], inline=True,
-        label="Neuron 2: observed response",
-    )
-    intro_observed_three = mo.ui.radio(
-        options=list(intro_responses), value=intro_worked_responses[2], inline=True,
-        label="Neuron 3: observed response",
-    )
-    return intro_observed_one, intro_observed_three, intro_observed_two
-
-
-@app.cell(hide_code=True)
-def _(
-    clean_axes,
-    intro_directions,
-    intro_draw_table,
-    intro_neuron_colors,
-    intro_number,
-    intro_observed_one,
-    intro_observed_three,
-    intro_observed_two,
-    intro_response_probabilities,
-    intro_responses,
-    mo,
-    np,
-    plt,
-):
-    _observations = (
-        intro_observed_one.value, intro_observed_two.value, intro_observed_three.value
-    )
-    _factors = np.array(
-        [
-            intro_response_probabilities[_neuron, :, intro_responses.index(_response)]
-            for _neuron, _response in enumerate(_observations)
-        ]
-    )
-    _joint = _factors.prod(axis=0)
-    _best = np.isclose(_joint, _joint.max(), rtol=1e-10, atol=1e-12)
-    _winners = [_direction for _direction, _wins in zip(intro_directions, _best) if _wins]
-    _one_winners = [
-        _direction for _direction, _value in zip(intro_directions, _factors[0])
-        if np.isclose(_value, _factors[0].max())
-    ]
-    _ratio = _joint[2] / _joint[0]
-    _comparison = (
-        "The pattern supports rightward and leftward equally."
-        if np.isclose(_ratio, 1) else
-        "The pattern favors rightward over leftward."
-        if _ratio > 1 else
-        "The pattern favors leftward over rightward."
-    )
-    _decision = (
-        f"With all three neurons, **{_winners[0]}** has the largest likelihood."
-        if len(_winners) == 1 else
-        f"With all three neurons, **{' and '.join(_winners)}** tie for the largest likelihood."
-    )
-    _rows = []
-    for _index, _direction in enumerate(intro_directions):
-        _entries = " | ".join(f"{_value:.2f}" for _value in _factors[:, _index])
-        _product = " × ".join(f"{_value:.2f}" for _value in _factors[:, _index])
-        _rows.append(
-            f"| {_direction.capitalize()} | {_entries} | "
-            f"{_product} = **{intro_number(_joint[_index])}** |"
-        )
-
-    _fig = plt.figure(figsize=(14.4, 6.8), layout="constrained")
-    _fig.patch.set_facecolor("white")
-    _grid = _fig.add_gridspec(3, 3, width_ratios=[1.05, 1.4, 1.4], hspace=0.10, wspace=0.15)
-    _table_axes = []
-    for _neuron, _response in enumerate(_observations):
-        _axis = _fig.add_subplot(_grid[_neuron, 0])
-        intro_draw_table(_axis, _neuron, _response)
-        _table_axes.append(_axis)
-    _table_axes[0].set_title(
-        f"A · Select the observed columns\nNeuron 1: {_observations[0]}",
-        fontsize=11, color=intro_neuron_colors[0],
-    )
-    _table_axes[-1].set_xlabel("Possible response", fontsize=10)
-
-    _ax_individual = _fig.add_subplot(_grid[:, 1])
-    _ax_joint = _fig.add_subplot(_grid[:, 2])
-    _positions = np.arange(3)
-    for _neuron, _color in enumerate(intro_neuron_colors):
-        _bars = _ax_individual.barh(
-            _positions + (_neuron - 1) * 0.22, _factors[_neuron],
-            height=0.19, color=_color,
-            label=f"Neuron {_neuron + 1}: {_observations[_neuron]}",
-        )
-        _ax_individual.bar_label(
-            _bars, labels=[f"{_value:.2f}" for _value in _factors[_neuron]],
-            padding=4, fontsize=9,
-        )
-    _ax_individual.set(
-        title="B · Individual likelihoods",
-        xlabel="Probability of each observed response", xlim=(0, 0.85),
-    )
-    _ax_individual.legend(frameon=False, fontsize=9, loc="lower right")
-    _bars = _ax_joint.barh(
-        _positions, _joint,
-        color=["#7c3aed" if _wins else "#b8a4ea" for _wins in _best], height=0.55,
-    )
-    _ax_joint.bar_label(
-        _bars, labels=[intro_number(_value) for _value in _joint], padding=6, fontsize=10,
-    )
-    _ax_joint.set(
-        title="C · Multiply to get the joint likelihood",
-        xlabel="Probability of the whole response pattern", xlim=(0, 0.22),
-    )
-    _ax_joint.set_xticks([0, 0.05, 0.10, 0.15, 0.20])
-    for _axis in (_ax_individual, _ax_joint):
-        _axis.set_yticks(_positions, [_direction.capitalize() for _direction in intro_directions])
-        _axis.set_ylim(2.7, -0.65)
-        _axis.tick_params(labelsize=9)
-        _axis.xaxis.label.set_size(10)
-        _axis.title.set_size(11)
-    clean_axes([_ax_individual, _ax_joint])
-
-    mo.vstack(
-        [
-            intro_observed_one,
-            intro_observed_two,
-            intro_observed_three,
-            _fig,
-            mo.md(
-                f"| Candidate direction | Neuron 1: {_observations[0]} | "
-                f"Neuron 2: {_observations[1]} | Neuron 3: {_observations[2]} | Joint likelihood |\n"
-                "|---|---:|---:|---:|---|\n" + "\n".join(_rows)
-            ),
-            mo.callout(
-                mo.md(
-                    f"**Neuron 1 alone:** the largest likelihood is for "
-                    f"**{' and '.join(_one_winners)}**. {_decision}\n\n"
-                    f"**Rightward versus leftward:** "
-                    f"{intro_number(_joint[2])} / {intro_number(_joint[0])} "
-                    f"= **{_ratio:.3g}**. {_comparison} "
-                    "This two-direction ratio does not compare either one with upward."
-                ),
-                kind="info",
-            ),
-        ],
-        gap=0.7,
-    )
-    return
+    intro_explorer
+    return (intro_explorer,)
 
 
 @app.cell(hide_code=True)
