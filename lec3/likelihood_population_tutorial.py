@@ -216,10 +216,66 @@ def _(mo):
     - **Both tosses are heads:** HH only — 1 out of 4, so $P(H_1\text{ and }H_2)=1/4$.
 
     Here $H_1$ means “heads on toss 1” and $H_2$ means “heads on toss 2.”
-    In the panel below, click the outcomes that belong to an event.
-    The count and probability update together. Try “First toss H,”
-    “Second toss H,” and “Both H” to check the three counts above.
+    Each panel below contains the **same four outcomes**. The colored
+    squares show which outcomes belong to the event named above it.
+    Compare all three at once: **HH is the only outcome shared by the
+    first two events**, so it is the only colored square in the third panel.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(Rectangle, mo, plt):
+    _outcomes = (("HH", "HT"), ("TH", "TT"))
+    _events = (
+        ("First toss is heads", "#2563a8", lambda row, column: row == 0),
+        ("Second toss is heads", "#d97706", lambda row, column: column == 0),
+        ("Both tosses are heads", "#7c3aed", lambda row, column: row == 0 and column == 0),
+    )
+    _fig, _axes = plt.subplots(1, 3, figsize=(11.7, 3.4), layout="constrained")
+    _fig.patch.set_facecolor("white")
+    for _axis, (_title, _color, _matches) in zip(_axes, _events):
+        _count = 0
+        for _row in range(2):
+            for _column in range(2):
+                _selected = _matches(_row, _column)
+                _count += int(_selected)
+                _axis.add_patch(
+                    Rectangle(
+                        (_column, _row), 1, 1,
+                        facecolor=_color if _selected else "#f1f4f8",
+                        edgecolor="white", linewidth=3,
+                    )
+                )
+                _axis.text(
+                    _column + 0.5, _row + 0.5, _outcomes[_row][_column],
+                    ha="center", va="center", fontsize=18,
+                    color="white" if _selected else "#5f6b7c",
+                    fontweight="bold" if _selected else "normal",
+                )
+        _probability = "1/2" if _count == 2 else "1/4"
+        _axis.set(
+            title=f"{_title}\n{_count} of 4 outcomes = {_probability}",
+            xlim=(0, 2), ylim=(2, 0), aspect="equal",
+        )
+        _axis.set_xticks([0.5, 1.5], ["Toss 2: H", "Toss 2: T"])
+        _axis.set_yticks([0.5, 1.5], ["Toss 1: H", "Toss 1: T"])
+        _axis.tick_params(length=0, labelsize=9)
+        _axis.title.set_size(11)
+        for _spine in _axis.spines.values():
+            _spine.set_visible(False)
+    mo.vstack(
+        [
+            _fig,
+            mo.md("""
+            **Now try it yourself.** In the interactive panel below, click
+            outcomes to include them in an event and watch its probability
+            update. The “First toss H,” “Second toss H,” and “Both H” buttons
+            reproduce the three panels above.
+            """),
+        ],
+        gap=0.6,
+    )
     return
 
 

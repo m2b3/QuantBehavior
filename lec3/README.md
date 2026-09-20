@@ -1,9 +1,9 @@
 # Likelihood and neural populations
 
 An interactive marimo tutorial accompanying Jazayeri & Movshon (2006). It
-starts with clickable coin-toss outcomes and checking the multiplication rule
-for independent events. It then introduces three neurons, three discrete
-response categories, and an explicit table of response probabilities for
+starts with a three-panel coin comparison followed by clickable outcomes,
+then checks the multiplication rule for independent events. It introduces three
+neurons, three discrete response categories, and an explicit table of response probabilities for
 each stimulus. Worked examples build from
 one neuron's likelihood to the product for all three neurons, followed by
 response tables that students can click directly. Linked panels highlight each
